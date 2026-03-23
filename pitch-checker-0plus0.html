@@ -1300,10 +1300,21 @@ async function toggleScaleTrainer() {
 }
 
 async function startScaleTrainer() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('이 브라우저는 마이크를 지원하지 않아요. Chrome을 사용해주세요.', 'error');
+    return;
+  }
   try {
     scaleMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch(e) {
-    showToast('마이크 권한이 필요합니다.', 'error'); return;
+    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+      showToast('마이크 권한이 거부됐어요. 주소창 왼쪽 🔒 아이콘 → 마이크 → 허용 후 새로고침!', 'error');
+    } else if (e.name === 'NotFoundError') {
+      showToast('마이크를 찾을 수 없어요. 마이크가 연결되어 있는지 확인해주세요.', 'error');
+    } else {
+      showToast('마이크 오류: ' + e.name + ' — ' + e.message, 'error');
+    }
+    return;
   }
   scaleAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const src = scaleAudioCtx.createMediaStreamSource(scaleMicStream);
@@ -1576,10 +1587,20 @@ async function toggleLivePitch() {
 }
 
 async function startLivePitch() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('이 브라우저는 마이크를 지원하지 않아요. Chrome을 사용해주세요.', 'error');
+    return;
+  }
   try {
     liveMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
   } catch(e) {
-    showToast('마이크 접근 권한이 필요합니다.', 'error');
+    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+      showToast('마이크 권한이 거부됐어요. 주소창 왼쪽 🔒 아이콘 → 마이크 → 허용 후 새로고침!', 'error');
+    } else if (e.name === 'NotFoundError') {
+      showToast('마이크를 찾을 수 없어요. 마이크가 연결되어 있는지 확인해주세요.', 'error');
+    } else {
+      showToast('마이크 오류: ' + e.name + ' — ' + e.message, 'error');
+    }
     return;
   }
 
