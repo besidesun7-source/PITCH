@@ -118,7 +118,9 @@
   .piano-key.is-current .key-label { color: var(--accent2); }
   .piano-key.is-current .key-ko { color: var(--accent); }
   .piano-key.is-success { background: rgba(52,211,153,0.22); border-color: var(--green); box-shadow: 0 0 16px rgba(52,211,153,0.35); animation: kpop 0.35s ease-out; }
-  .piano-key.is-fail { background: rgba(248,113,113,0.18); border-color: var(--red); animation: kshake 0.28s ease-out; }
+  .piano-key.is-success-orange { background: rgba(251,146,60,0.22); border-color: #fb923c; box-shadow: 0 0 16px rgba(251,146,60,0.35); animation: kpop 0.35s ease-out; }
+  .piano-key.is-success-red { background: rgba(248,113,113,0.22); border-color: var(--red); box-shadow: 0 0 16px rgba(248,113,113,0.35); animation: kpop 0.35s ease-out; }
+  .piano-key.is-fail { background: rgba(100,100,100,0.18); border-color: #555; animation: kshake 0.28s ease-out; }
   .piano-key.is-done { background: rgba(52,211,153,0.07); border-color: rgba(52,211,153,0.22); }
   .piano-key.is-done .key-label { color: rgba(52,211,153,0.45); }
   @keyframes kpop { 0%{transform:scaleY(1.08)} 100%{transform:scaleY(1)} }
@@ -155,8 +157,10 @@
     color: var(--accent2); text-shadow: 0 0 24px rgba(192,132,252,0.35);
     transition: color 0.12s;
   }
-  .target-name.ok  { color: var(--green);  text-shadow: 0 0 24px rgba(52,211,153,0.5); }
-  .target-name.bad { color: var(--red);    text-shadow: 0 0 24px rgba(248,113,113,0.5); }
+  .target-name.ok     { color: var(--green);  text-shadow: 0 0 24px rgba(52,211,153,0.5); }
+  .target-name.ok-orange { color: #fb923c;   text-shadow: 0 0 24px rgba(251,146,60,0.5); }
+  .target-name.ok-red    { color: var(--red); text-shadow: 0 0 24px rgba(248,113,113,0.5); }
+  .target-name.bad    { color: #666;         text-shadow: none; }
   .target-ko   { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-top: 2px; }
   .target-freq { font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem; color: var(--text-dim); margin-top: 4px; }
   .target-oct  { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--accent); margin-top: 2px; }
@@ -184,7 +188,9 @@
     font-size: 0.78rem; font-family: 'IBM Plex Mono', monospace;
     color: var(--text-dim); transition: all 0.2s;
   }
-  .hc.filled { background: rgba(52,211,153,0.15); border-color: var(--green); color: var(--green); font-weight: 700; }
+  .hc.filled         { background: rgba(52,211,153,0.15);  border-color: var(--green);  color: var(--green);  font-weight: 700; }
+  .hc.filled-orange  { background: rgba(251,146,60,0.15);  border-color: #fb923c;       color: #fb923c;       font-weight: 700; }
+  .hc.filled-red     { background: rgba(248,113,113,0.15); border-color: var(--red);    color: var(--red);    font-weight: 700; }
   .hc.cur { border-color: var(--accent); box-shadow: 0 0 8px rgba(124,106,247,0.4); animation: hcpulse 0.9s ease-in-out infinite; }
   @keyframes hcpulse { 0%,100%{box-shadow:0 0 4px rgba(124,106,247,0.25)} 50%{box-shadow:0 0 12px rgba(124,106,247,0.6)} }
 
@@ -290,7 +296,7 @@
       <!-- Sustain bar -->
       <div class="sustain-wrap">
         <div class="sustain-top">
-          <span>음 유지 시간 (2초 유지 = 1회 정답)</span>
+          <span>음 유지 시간 (0.5초 유지 = 1회 정답)</span>
           <span id="sustainPct">0%</span>
         </div>
         <div class="sustain-track">
@@ -324,8 +330,8 @@
 const KO    = {C:'도','C#':'도#',D:'레','D#':'레#',E:'미',F:'파','F#':'파#',G:'솔','G#':'솔#',A:'라','A#':'라#',B:'시'};
 const SEMIS = {C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11};
 const REQUIRED = 3;       // 정답 3회면 다음 음
-const SUSTAIN_MS = 2000;  // 2초 유지 = 1회 정답
-const HIT_CENTS  = 60;    // ±60¢ 허용
+const SUSTAIN_MS = 500;   // 0.5초 유지 = 1회 정답
+const HIT_CENTS  = 10;    // ±10¢ 이내면 통과 (3단계: ≤3¢ 초록, ≤7¢ 주황, ≤10¢ 빨강)
 
 const SCALE = [];
 for (let oct = 3; oct <= 6; oct++) {
@@ -346,6 +352,7 @@ for (let oct = 3; oct <= 6; oct++) {
 let active = false, micStream = null, audioCtx = null, analyser = null, rafId = null;
 let curIdx = 0, hits = 0, totalOk = 0, totalFail = 0;
 let sustainStart = null, sustainAcc = 0;
+let hitColors = []; // 각 정답의 색상 기록: 'green' | 'orange' | 'red'
 
 // ═══ Toast ════════════════════════════════════════════════
 function toast(msg, type='') {
@@ -382,7 +389,7 @@ async function startTrainer() {
   audioCtx.createMediaStreamSource(micStream).connect(analyser);
 
   active = true; curIdx = 0; hits = 0; totalOk = 0; totalFail = 0;
-  sustainStart = null; sustainAcc = 0;
+  sustainStart = null; sustainAcc = 0; hitColors = [];
 
   document.getElementById('btnStart').classList.add('active');
   document.getElementById('btnStartText').textContent = '연습 종료';
@@ -450,9 +457,13 @@ function refreshKeys() {
 function renderHits() {
   document.getElementById('hitCircles').innerHTML =
     Array.from({ length: REQUIRED }, (_, i) => {
-      const cls = i < hits ? 'hc filled' : i === hits ? 'hc cur' : 'hc';
-      const txt = i < hits ? '✓' : i + 1;
-      return `<div class="${cls}">${txt}</div>`;
+      if (i < hits) {
+        const c = hitColors[i] || 'green';
+        const cls = c === 'orange' ? 'hc filled-orange' : c === 'red' ? 'hc filled-red' : 'hc filled';
+        return `<div class="${cls}">✓</div>`;
+      }
+      const cls = i === hits ? 'hc cur' : 'hc';
+      return `<div class="${cls}">${i + 1}</div>`;
     }).join('');
 }
 
@@ -464,7 +475,7 @@ function navigate(dir) {
 
 function gotoNote(idx) {
   curIdx = Math.max(0, Math.min(SCALE.length - 1, idx));
-  hits = 0; sustainStart = null; sustainAcc = 0;
+  hits = 0; hitColors = []; sustainStart = null; sustainAcc = 0;
 
   const n = SCALE[curIdx];
   document.getElementById('targetName').textContent = n.name;
@@ -572,38 +583,62 @@ function loop() {
 
   const target = SCALE[curIdx];
   const cents  = Math.round(1200 * Math.log2(freq / target.freq));
-  const isMatch = info.name === target.name && info.octave === target.octave && Math.abs(cents) <= HIT_CENTS;
-  const isClose = Math.abs(cents) <= HIT_CENTS * 2 && info.name === target.name;
+  const absCents = Math.abs(cents);
+
+  // 음이름이 같고 옥타브가 같은지 체크
+  const sameNote = info.name === target.name && info.octave === target.octave;
+
+  // 3단계 통과 판정
+  const isGreen  = sameNote && absCents <= 3;   // ±3¢  → 초록
+  const isOrange = sameNote && absCents <= 7;   // ±4~7¢ → 주황
+  const isRed    = sameNote && absCents <= 10;  // ±8~10¢ → 빨강
+  const isMatch  = isGreen || isOrange || isRed;
+  const isClose  = sameNote && absCents <= 20;  // 표시용 노란색(close)
+
+  // 히트 색상 결정
+  const hitColor = isGreen ? 'green' : isOrange ? 'orange' : 'red';
 
   // Detected display
   const detEl = document.getElementById('detNote');
   detEl.textContent = info.name + info.octave;
   detEl.className   = 'det-note' + (isMatch ? ' match' : isClose ? ' close' : ' wrong');
-  document.getElementById('detCents').textContent = isMatch ? '✓' : (cents > 0 ? '+' : '') + cents + '¢';
+  // match 색상을 단계별로 반영
+  if (isMatch) {
+    detEl.style.color = isGreen ? 'var(--green)' : isOrange ? '#fb923c' : 'var(--red)';
+  } else {
+    detEl.style.color = '';
+  }
+  document.getElementById('detCents').textContent = isMatch ? '✓ ' + (absCents === 0 ? '완벽' : (cents > 0 ? '+' : '') + cents + '¢') : (cents > 0 ? '+' : '') + cents + '¢';
 
   const now = performance.now();
 
   if (isMatch) {
     if (sustainStart === null) sustainStart = now;
     sustainAcc = (now - sustainStart);
+    // sustain 바 색상도 단계 반영
+    const fill = document.getElementById('sustainFill');
+    fill.style.background = isGreen ? 'linear-gradient(90deg,var(--accent),var(--green))' : isOrange ? 'linear-gradient(90deg,var(--accent),#fb923c)' : 'linear-gradient(90deg,var(--accent),var(--red))';
     setSustain(sustainAcc);
 
     if (sustainAcc >= SUSTAIN_MS) {
       // ✅ 1회 정답!
       sustainStart = null; sustainAcc = 0; setSustain(0);
+      hitColors.push(hitColor);
       hits++; totalOk++;
       renderHits();
 
-      // key flash green
+      // 건반 flash — 색상별
       const k = document.getElementById('key_' + curIdx);
+      const successCls = isGreen ? 'is-success' : isOrange ? 'is-success-orange' : 'is-success-red';
       if (k) {
-        k.classList.remove('is-current'); k.classList.add('is-success');
-        setTimeout(() => { k.classList.remove('is-success'); k.classList.add('is-current'); }, 380);
+        k.classList.remove('is-current'); k.classList.add(successCls);
+        setTimeout(() => { k.classList.remove(successCls); k.classList.add('is-current'); }, 380);
       }
-      flashName('ok');
+      // 음이름 flash — 색상별
+      const flashCls = isGreen ? 'ok' : isOrange ? 'ok-orange' : 'ok-red';
+      flashName(flashCls);
 
       if (hits >= REQUIRED) {
-        // 3회 달성 → 다음 음
         setTimeout(() => {
           if (curIdx + 1 >= SCALE.length) finishTrainer();
           else gotoNote(curIdx + 1);
