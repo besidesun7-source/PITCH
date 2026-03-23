@@ -481,6 +481,27 @@
   }
   .btn-retry:hover { background: rgba(52,211,153,0.1); }
 
+  .btn-replay {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 18px;
+    background: transparent;
+    border: 1.5px solid var(--border);
+    border-radius: 20px; color: var(--text-mid);
+    font-family: 'Noto Sans KR', sans-serif; font-size: 0.82rem;
+    cursor: pointer; transition: all 0.2s; margin-left: auto;
+  }
+  .btn-replay:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(192,132,252,0.08); }
+  .btn-replay:active { transform: scale(0.96); }
+  .btn-replay.playing {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(124,106,247,0.1);
+    animation: replay-pulse 0.6s ease-in-out infinite alternate;
+  }
+  @keyframes replay-pulse {
+    from { box-shadow: 0 0 0 rgba(124,106,247,0); }
+    to   { box-shadow: 0 0 10px rgba(124,106,247,0.4); }
+  }
+
   /* ── 실시간 음정 감지 ── */
   .live-pitch-section {
     margin-bottom: 28px;
@@ -708,6 +729,9 @@
             <div class="scale-target-freq" id="scaleTargetFreq">— Hz</div>
             <div class="scale-target-oct" id="scaleTargetOct"></div>
           </div>
+          <button class="btn-replay" id="btnReplay" onclick="replayCurrentTone()">
+            🔊 다시 듣기
+          </button>
         </div>
 
         <!-- 6 attempt circles -->
@@ -1425,6 +1449,18 @@ function updateScaleTarget() {
 
   // Play reference tone via Web Audio (short sine blip)
   playReferenceTone(n.freq);
+}
+
+function replayCurrentTone() {
+  if (scaleIndex >= SCALE_ALL.length) return;
+  const btn = document.getElementById('btnReplay');
+  btn.classList.add('playing');
+  btn.textContent = '🔊 재생 중...';
+  playReferenceTone(SCALE_ALL[scaleIndex].freq);
+  setTimeout(() => {
+    btn.classList.remove('playing');
+    btn.textContent = '🔊 다시 듣기';
+  }, 900);
 }
 
 function playReferenceTone(freq) {
