@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pitch Checker — 한로로 0+0</title>
+<title>음계 트레이너</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -19,7 +19,6 @@
     --text: #e2e0f0;
     --text-dim: #6b6880;
     --text-mid: #a09cb8;
-    --glow: rgba(124, 106, 247, 0.15);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -27,875 +26,293 @@
     color: var(--text);
     font-family: 'Noto Sans KR', sans-serif;
     min-height: 100vh;
-    overflow-x: hidden;
   }
   body::before {
     content: '';
-    position: fixed;
-    inset: 0;
+    position: fixed; inset: 0;
     background-image:
       linear-gradient(rgba(124,106,247,0.03) 1px, transparent 1px),
       linear-gradient(90deg, rgba(124,106,247,0.03) 1px, transparent 1px);
     background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
+    pointer-events: none; z-index: 0;
   }
-  .container { max-width: 960px; margin: 0 auto; padding: 48px 24px; position: relative; z-index: 1; }
+  .container {
+    max-width: 700px; margin: 0 auto;
+    padding: 40px 20px 60px;
+    position: relative; z-index: 1;
+  }
 
-  header { margin-bottom: 40px; display: flex; align-items: flex-end; gap: 16px; }
+  /* Header */
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 36px; }
   .logo-mark {
-    width: 48px; height: 48px;
+    width: 44px; height: 44px; flex-shrink: 0;
     background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px; flex-shrink: 0;
-    box-shadow: 0 0 24px rgba(124,106,247,0.4);
+    border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; box-shadow: 0 0 20px rgba(124,106,247,0.35);
   }
   h1 {
-    font-family: 'DM Serif Display', serif; font-size: 2rem; line-height: 1;
+    font-family: 'DM Serif Display', serif; font-size: 1.7rem; line-height: 1;
     background: linear-gradient(135deg, #fff 0%, var(--accent2) 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
-  .subtitle { font-size: 0.8rem; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.05em; margin-top: 4px; }
+  .subtitle { font-size: 0.75rem; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; margin-top: 3px; }
 
-  /* Song Info Card */
-  .song-card {
-    background: linear-gradient(135deg, rgba(124,106,247,0.1), rgba(192,132,252,0.05));
-    border: 1px solid rgba(124,106,247,0.3);
-    border-radius: 16px;
-    padding: 20px 24px;
-    margin-bottom: 28px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-  .song-thumb {
-    width: 56px; height: 56px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px; flex-shrink: 0;
-  }
-  .song-meta { flex: 1; }
-  .song-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; color: var(--text); }
-  .song-artist { font-size: 0.82rem; color: var(--text-mid); margin-top: 3px; }
-  .song-tags { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  .song-tag {
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem;
-    padding: 2px 8px; border-radius: 4px;
-    background: var(--surface2); color: var(--text-dim);
-    border: 1px solid var(--border);
-  }
-  .song-tag.active { background: rgba(124,106,247,0.15); color: var(--accent2); border-color: rgba(124,106,247,0.4); }
-  .score-loaded-badge {
-    display: flex; align-items: center; gap: 6px;
-    background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3);
-    border-radius: 8px; padding: 6px 12px;
-    font-size: 0.75rem; color: var(--green);
-    font-family: 'IBM Plex Mono', monospace;
-    white-space: nowrap;
-  }
-
-  /* Upload */
-  .upload-section { margin-bottom: 28px; }
-  .section-label {
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
-    color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.12em;
-    margin-bottom: 10px;
-  }
-  .upload-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 24px;
-    transition: border-color 0.2s, box-shadow 0.2s; position: relative; overflow: hidden;
-  }
-  .upload-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-    opacity: 0; transition: opacity 0.3s;
-  }
-  .upload-card:hover::before, .upload-card.has-file::before { opacity: 1; }
-  .upload-card.has-file { border-color: var(--accent); box-shadow: 0 0 20px var(--glow); }
-  .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-  .card-icon { font-size: 1.4rem; }
-  .card-label { font-size: 0.95rem; font-weight: 500; }
-  .card-ext {
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--text-dim);
-    background: var(--surface2); padding: 2px 7px; border-radius: 4px; margin-left: auto;
-  }
-  .drop-zone {
-    border: 1.5px dashed var(--border); border-radius: 10px; padding: 28px 16px;
-    text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative;
-  }
-  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); background: rgba(124,106,247,0.05); }
-  .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .drop-icon { font-size: 2rem; margin-bottom: 8px; }
-  .drop-text { font-size: 0.8rem; color: var(--text-dim); line-height: 1.5; }
-  .file-info {
-    margin-top: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem;
-    color: var(--green); background: rgba(52,211,153,0.08); padding: 6px 10px;
-    border-radius: 6px; display: none;
-  }
-  .file-info.show { display: block; }
-
-  /* Options */
-  .options-bar {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-    padding: 16px 20px; display: flex; align-items: center; gap: 24px;
-    margin-bottom: 20px; flex-wrap: wrap;
-  }
-  .option-group { display: flex; align-items: center; gap: 10px; }
-  .option-label { font-size: 0.78rem; color: var(--text-dim); white-space: nowrap; }
-  input[type="range"] {
-    -webkit-appearance: none; width: 100px; height: 4px;
-    background: var(--border); border-radius: 2px; outline: none;
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 14px; height: 14px;
-    background: var(--accent); border-radius: 50%; cursor: pointer;
-  }
-  .range-val { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--accent2); min-width: 36px; }
-
-  /* Button */
-  .btn-analyze {
-    width: 100%; padding: 16px;
+  /* Start button */
+  .btn-start {
+    width: 100%; padding: 15px;
     background: linear-gradient(135deg, var(--accent), var(--accent2));
     border: none; border-radius: 12px; color: #fff;
     font-family: 'Noto Sans KR', sans-serif; font-size: 1rem; font-weight: 700;
-    cursor: pointer; position: relative; overflow: hidden;
-    margin-bottom: 32px; transition: opacity 0.2s, transform 0.1s; letter-spacing: 0.05em;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: opacity 0.2s, transform 0.1s; position: relative; overflow: hidden;
   }
-  .btn-analyze::before {
+  .btn-start::before {
     content: ''; position: absolute; inset: 0;
     background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
     opacity: 0; transition: opacity 0.2s;
   }
-  .btn-analyze:hover::before { opacity: 1; }
-  .btn-analyze:active { transform: scale(0.99); }
-  .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-start:hover::before { opacity: 1; }
+  .btn-start:active { transform: scale(0.99); }
+  .btn-start.active { background: linear-gradient(135deg, #f87171, #fb923c); }
+  .start-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.7); }
+  .btn-start.active .start-dot {
+    background: #fff; box-shadow: 0 0 6px #fff;
+    animation: pdot 1s ease-in-out infinite;
+  }
+  @keyframes pdot { 0%,100%{transform:scale(1)} 50%{transform:scale(1.5)} }
 
-  /* Progress */
-  .progress-wrap { display: none; margin-bottom: 24px; }
-  .progress-wrap.show { display: block; }
-  .progress-label {
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--text-dim);
-    margin-bottom: 8px; display: flex; justify-content: space-between;
-  }
-  .progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
-  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 3px; width: 0%; transition: width 0.3s ease; }
+  /* Panel */
+  .panel { display: none; margin-top: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
+  .panel.show { display: block; }
 
-  /* Results */
-  .results-section { display: none; }
-  .results-section.show { display: block; }
+  /* Keyboard */
+  .keyboard-wrap {
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+    padding: 20px 16px 16px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  .keyboard { display: flex; align-items: flex-end; gap: 3px; min-width: max-content; width: fit-content; margin: 0 auto; }
 
-  .accuracy-ring-wrap {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-    padding: 28px; display: flex; align-items: center; gap: 32px; margin-bottom: 20px; flex-wrap: wrap;
-  }
-  .score-details { flex: 1; min-width: 200px; }
-  .score-big {
-    font-family: 'DM Serif Display', serif; font-size: 3.5rem; line-height: 1;
-    background: linear-gradient(135deg, var(--green), var(--accent2));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
-  .score-label { font-size: 0.78rem; color: var(--text-dim); margin-bottom: 16px; }
-  .stat-row { display: flex; gap: 20px; flex-wrap: wrap; }
-  .stat-val { font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; font-weight: 600; }
-  .stat-val.ok { color: var(--green); }
-  .stat-val.err { color: var(--red); }
-  .stat-val.warn { color: var(--yellow); }
-  .stat-lbl { font-size: 0.72rem; color: var(--text-dim); }
-
-  .notes-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 20px; }
-  .notes-table-header {
-    display: grid; grid-template-columns: 50px 80px 100px 100px 120px 1fr;
-    padding: 10px 16px; background: var(--surface2); border-bottom: 1px solid var(--border);
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--text-dim);
-    text-transform: uppercase; letter-spacing: 0.05em;
-  }
-  .note-row {
-    display: grid; grid-template-columns: 50px 80px 100px 100px 120px 1fr;
-    padding: 10px 16px; border-bottom: 1px solid rgba(42,42,61,0.5);
-    align-items: center; transition: background 0.15s; font-size: 0.82rem;
-  }
-  .note-row:last-child { border-bottom: none; }
-  .note-row:hover { background: rgba(124,106,247,0.04); }
-  .note-row.error { background: rgba(248,113,113,0.04); }
-  .note-row.error:hover { background: rgba(248,113,113,0.08); }
-  .note-row.warning { background: rgba(251,191,36,0.04); }
-  .note-num { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--text-dim); }
-  .note-name { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--accent2); }
-  .note-freq { font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem; color: var(--text-mid); }
-  .note-detected { font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem; }
-  .cent-bar-wrap { display: flex; align-items: center; gap: 6px; }
-  .cent-bar { width: 60px; height: 6px; background: var(--border); border-radius: 3px; position: relative; overflow: visible; }
-  .cent-center { position: absolute; left: 50%; top: -2px; width: 1px; height: 10px; background: var(--border); transform: translateX(-50%); }
-  .cent-marker { position: absolute; top: 0; height: 6px; border-radius: 3px; background: var(--green); }
-  .cent-val { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--text-dim); white-space: nowrap; }
-  .status-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; }
-  .pill-ok { background: rgba(52,211,153,0.12); color: var(--green); }
-  .pill-err { background: rgba(248,113,113,0.12); color: var(--red); }
-  .pill-warn { background: rgba(251,191,36,0.12); color: var(--yellow); }
-  .pill-skip { background: var(--surface2); color: var(--text-dim); }
-
-  .filter-tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-  .filter-tab {
-    padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border);
-    background: transparent; color: var(--text-dim); font-size: 0.78rem;
-    cursor: pointer; transition: all 0.15s; font-family: 'Noto Sans KR', sans-serif;
-  }
-  .filter-tab.active, .filter-tab:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
-
-  .section-heading {
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--text-dim);
-    text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px; margin-top: 24px;
-  }
-
-  .timeline-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; overflow-x: auto; }
-  .timeline-canvas { width: 100%; height: 120px; display: block; }
-
-  .toast {
-    position: fixed; bottom: 24px; right: 24px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 12px 18px; font-size: 0.82rem; color: var(--text);
-    transform: translateY(80px); opacity: 0;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 100; max-width: 320px;
-  }
-  .toast.show { transform: translateY(0); opacity: 1; }
-  .toast.error { border-color: var(--red); }
-  .toast.success { border-color: var(--green); }
-
-  .empty-state { text-align: center; padding: 40px 20px; color: var(--text-dim); font-size: 0.85rem; }
-  .empty-icon { font-size: 2.5rem; margin-bottom: 8px; }
-
-  /* Error detail panel */
-  .error-summary {
-    background: rgba(248,113,113,0.06);
-    border: 1px solid rgba(248,113,113,0.2);
-    border-radius: 12px; padding: 16px 20px; margin-bottom: 20px;
-  }
-  .error-summary-title { font-size: 0.82rem; color: var(--red); font-weight: 700; margin-bottom: 10px; }
-  .error-item { font-size: 0.78rem; color: var(--text-mid); padding: 4px 0; border-bottom: 1px solid rgba(248,113,113,0.1); }
-  .error-item:last-child { border-bottom: none; }
-  .error-note-tag { font-family: 'IBM Plex Mono', monospace; color: var(--red); font-weight: 600; margin-right: 8px; }
-
-  @media (max-width: 600px) {
-    .notes-table-header, .note-row { grid-template-columns: 40px 70px 85px 85px 100px 1fr; font-size: 0.68rem; }
-  }
-
-  /* ── 음계 트레이너 ── */
-  .scale-trainer-section { margin-bottom: 28px; }
-
-  .btn-scale-start {
-    display: flex; align-items: center; gap: 10px;
-    padding: 13px 22px;
-    background: transparent;
-    border: 1.5px solid var(--border);
-    border-radius: 12px; color: var(--text-mid);
-    font-family: 'Noto Sans KR', sans-serif; font-size: 0.9rem; font-weight: 500;
-    cursor: pointer; transition: all 0.2s;
-    width: 100%; justify-content: center;
-  }
-  .btn-scale-start:hover { border-color: #34d399; color: var(--green); background: rgba(52,211,153,0.05); }
-  .btn-scale-start.active {
-    background: rgba(52,211,153,0.08);
-    border-color: rgba(52,211,153,0.5);
-    color: var(--green);
-  }
-  .btn-scale-start .scale-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--text-dim); flex-shrink: 0; transition: background 0.2s;
-  }
-  .btn-scale-start.active .scale-dot {
-    background: var(--green);
-    box-shadow: 0 0 8px var(--green);
-    animation: pulse-dot 1s ease-in-out infinite;
-  }
-
-  .scale-panel {
-    display: none; margin-top: 16px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; overflow: hidden;
-  }
-  .scale-panel.show { display: block; }
-
-  /* Piano keyboard strip */
-  .scale-keyboard {
-    display: flex; align-items: flex-end; justify-content: center;
-    padding: 20px 20px 0;
-    gap: 3px; overflow-x: auto;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-    flex-wrap: nowrap;
-  }
-  .key-wrap { display: flex; flex-direction: column; align-items: center; gap: 0; }
   .piano-key {
-    width: 32px; height: 80px;
-    border-radius: 0 0 6px 6px;
-    border: 1.5px solid #2a2a3d;
-    background: #1e1e2e;
+    width: 34px; height: 86px; border-radius: 0 0 7px 7px;
+    border: 1.5px solid #252535; background: #1c1c2e;
     display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-    padding-bottom: 6px; cursor: default;
-    transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
-    position: relative; flex-shrink: 0;
+    padding-bottom: 7px; cursor: pointer; flex-shrink: 0;
+    transition: background 0.12s, box-shadow 0.12s, transform 0.08s;
+    user-select: none; -webkit-user-select: none;
   }
+  .piano-key:hover:not(.is-current):not(.is-done) { background: #252540; }
+  .piano-key:active { transform: scaleY(0.95); }
   .piano-key.black-key {
-    width: 22px; height: 52px;
-    background: #0d0d18;
-    border-color: #111;
-    z-index: 1;
-    margin: 0 -2px;
+    width: 24px; height: 54px; background: #0c0c1a;
+    border-color: #0a0a16; z-index: 1; margin: 0 -2px;
   }
-  .piano-key .key-label {
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem;
-    color: var(--text-dim); line-height: 1; text-align: center;
-  }
-  .piano-key .key-ko {
-    font-size: 0.58rem; color: var(--text-dim); margin-top: 2px;
-  }
-  .piano-key.current {
-    background: rgba(124,106,247,0.25);
-    border-color: var(--accent);
-    box-shadow: 0 0 16px rgba(124,106,247,0.4), inset 0 0 8px rgba(124,106,247,0.2);
-    transform: scaleY(1.04);
-  }
-  .piano-key.current .key-label { color: var(--accent2); }
-  .piano-key.success {
-    background: rgba(52,211,153,0.2);
-    border-color: var(--green);
-    box-shadow: 0 0 14px rgba(52,211,153,0.3);
-    animation: key-success 0.4s ease-out;
-  }
-  @keyframes key-success {
-    0% { transform: scaleY(1.1); box-shadow: 0 0 30px rgba(52,211,153,0.6); }
-    100% { transform: scaleY(1); }
-  }
-  .piano-key.failed {
-    background: rgba(248,113,113,0.15);
-    border-color: var(--red);
-    animation: key-shake 0.3s ease-out;
-  }
-  @keyframes key-shake {
-    0%,100% { transform: translateX(0); }
-    25% { transform: translateX(-3px); }
-    75% { transform: translateX(3px); }
-  }
+  .piano-key.black-key:hover:not(.is-current):not(.is-done) { background: #14142a; }
+  .piano-key .key-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.58rem; color: #3a3a55; line-height: 1; text-align: center; pointer-events: none; }
+  .piano-key.black-key .key-label { color: #2a2a45; }
+  .piano-key .key-ko { font-size: 0.54rem; color: #2e2e48; margin-top: 2px; pointer-events: none; }
 
-  /* Main trainer body */
-  .scale-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+  .piano-key.is-current {
+    background: rgba(124,106,247,0.22); border-color: var(--accent);
+    box-shadow: 0 0 18px rgba(124,106,247,0.4), inset 0 0 10px rgba(124,106,247,0.15);
+  }
+  .piano-key.is-current .key-label { color: var(--accent2); }
+  .piano-key.is-current .key-ko { color: var(--accent); }
+  .piano-key.is-success { background: rgba(52,211,153,0.22); border-color: var(--green); box-shadow: 0 0 16px rgba(52,211,153,0.35); animation: kpop 0.35s ease-out; }
+  .piano-key.is-fail { background: rgba(248,113,113,0.18); border-color: var(--red); animation: kshake 0.28s ease-out; }
+  .piano-key.is-done { background: rgba(52,211,153,0.07); border-color: rgba(52,211,153,0.22); }
+  .piano-key.is-done .key-label { color: rgba(52,211,153,0.45); }
+  @keyframes kpop { 0%{transform:scaleY(1.08)} 100%{transform:scaleY(1)} }
+  @keyframes kshake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
 
-  .scale-target-area {
-    display: flex; align-items: center; gap: 20px;
-    background: var(--surface2); border-radius: 12px; padding: 16px 20px;
-    border: 1px solid var(--border);
-  }
-  .scale-target-note {
-    font-family: 'DM Serif Display', serif;
-    font-size: 3.5rem; line-height: 1; min-width: 80px; text-align: center;
-    color: var(--text-dim); transition: color 0.2s;
-  }
-  .scale-target-note.active { color: var(--accent2); text-shadow: 0 0 20px rgba(192,132,252,0.4); }
-  .scale-target-note.success-flash { color: var(--green); }
-  .scale-target-note.fail-flash { color: var(--red); }
-
-  .scale-target-info { flex: 1; }
-  .scale-target-label {
-    font-size: 0.72rem; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace;
-    text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;
-  }
-  .scale-target-ko { font-size: 1.2rem; font-weight: 700; color: var(--text); }
-  .scale-target-freq { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; }
-  .scale-target-oct { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--accent); margin-top: 2px; }
+  /* Body */
+  .panel-body { padding: 22px 22px 24px; display: flex; flex-direction: column; gap: 18px; }
 
   /* Progress dots */
-  .scale-dots {
-    display: flex; gap: 5px; align-items: center; flex-wrap: wrap;
-  }
-  .scale-dot-item {
-    width: 10px; height: 10px; border-radius: 50%;
-    background: var(--border); transition: all 0.2s;
-    border: 1px solid transparent;
-  }
-  .scale-dot-item.done { background: var(--green); border-color: rgba(52,211,153,0.5); }
-  .scale-dot-item.current-dot { background: var(--accent); border-color: var(--accent2); box-shadow: 0 0 6px var(--accent); }
-  .scale-dot-item.fail { background: var(--red); border-color: rgba(248,113,113,0.5); }
+  .prog-dots { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+  .pdot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); transition: all 0.2s; }
+  .pdot.done { background: var(--green); }
+  .pdot.cur { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
 
-  /* Attempt circles — 6 required */
-  .attempts-row {
-    display: flex; gap: 8px; align-items: center;
+  /* Target card */
+  .target-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px 20px;
+    display: flex; align-items: center; gap: 16px;
   }
-  .attempts-label { font-size: 0.72rem; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; margin-right: 4px; }
-  .attempt-circle {
-    width: 28px; height: 28px; border-radius: 50%;
-    border: 1.5px solid var(--border);
+  .nav-btn {
+    width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%;
+    border: 1.5px solid var(--border); background: transparent; color: var(--text-dim);
+    font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(192,132,252,0.08); }
+  .nav-btn:active { transform: scale(0.9); }
+  .nav-btn:disabled { opacity: 0.18; cursor: default; pointer-events: none; }
+
+  .target-center { flex: 1; text-align: center; }
+  .target-name {
+    font-family: 'DM Serif Display', serif; font-size: 4rem; line-height: 1;
+    color: var(--accent2); text-shadow: 0 0 24px rgba(192,132,252,0.35);
+    transition: color 0.12s;
+  }
+  .target-name.ok  { color: var(--green);  text-shadow: 0 0 24px rgba(52,211,153,0.5); }
+  .target-name.bad { color: var(--red);    text-shadow: 0 0 24px rgba(248,113,113,0.5); }
+  .target-ko   { font-size: 1.1rem; font-weight: 700; color: var(--text); margin-top: 2px; }
+  .target-freq { font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem; color: var(--text-dim); margin-top: 4px; }
+  .target-oct  { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: var(--accent); margin-top: 2px; }
+
+  .btn-replay {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+    padding: 7px 16px; background: transparent; border: 1.5px solid var(--border);
+    border-radius: 20px; color: var(--text-dim);
+    font-family: 'Noto Sans KR', sans-serif; font-size: 0.8rem;
+    cursor: pointer; transition: all 0.18s;
+  }
+  .btn-replay:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(192,132,252,0.07); }
+  .btn-replay:active { transform: scale(0.95); }
+  .btn-replay.playing { border-color: var(--accent); color: var(--accent); animation: rglow 0.6s ease-in-out infinite alternate; }
+  @keyframes rglow { from{box-shadow:none} to{box-shadow:0 0 10px rgba(124,106,247,0.4)} }
+
+  /* Hit circles */
+  .hits-row { display: flex; align-items: center; gap: 10px; }
+  .hits-label { font-size: 0.72rem; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; }
+  .hit-circles { display: flex; gap: 8px; }
+  .hc {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 1.5px solid var(--border); background: var(--surface2);
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.75rem; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem; font-family: 'IBM Plex Mono', monospace;
     color: var(--text-dim); transition: all 0.2s;
-    background: var(--surface2);
   }
-  .attempt-circle.hit {
-    background: rgba(52,211,153,0.15); border-color: var(--green);
-    color: var(--green); font-weight: 700;
-  }
-  .attempt-circle.miss {
-    background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.4);
-    color: var(--red);
-  }
-  .attempt-circle.active-slot {
-    border-color: var(--accent); box-shadow: 0 0 8px rgba(124,106,247,0.4);
-    animation: slot-pulse 0.8s ease-in-out infinite;
-  }
-  @keyframes slot-pulse {
-    0%,100% { box-shadow: 0 0 6px rgba(124,106,247,0.3); }
-    50% { box-shadow: 0 0 12px rgba(124,106,247,0.6); }
-  }
+  .hc.filled { background: rgba(52,211,153,0.15); border-color: var(--green); color: var(--green); font-weight: 700; }
+  .hc.cur { border-color: var(--accent); box-shadow: 0 0 8px rgba(124,106,247,0.4); animation: hcpulse 0.9s ease-in-out infinite; }
+  @keyframes hcpulse { 0%,100%{box-shadow:0 0 4px rgba(124,106,247,0.25)} 50%{box-shadow:0 0 12px rgba(124,106,247,0.6)} }
 
-  /* Detected note live */
-  .scale-detected-row {
+  /* Sustain bar */
+  .sustain-wrap { display: flex; flex-direction: column; gap: 5px; }
+  .sustain-top { display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--text-dim); }
+  .sustain-track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .sustain-fill { height: 100%; width: 0%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width 0.08s linear; }
+  .sustain-fill.done { background: var(--green); }
+
+  /* Detected bar */
+  .det-bar {
     display: flex; align-items: center; gap: 12px;
-    background: var(--surface2); border-radius: 10px; padding: 10px 16px;
-    border: 1px solid var(--border); min-height: 48px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 16px; min-height: 50px;
   }
-  .det-label { font-size: 0.7rem; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
-  .det-note { font-family: 'IBM Plex Mono', monospace; font-size: 1.2rem; font-weight: 700; color: var(--text-dim); min-width: 52px; transition: color 0.1s; }
+  .det-lbl { font-size: 0.7rem; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
+  .det-note { font-family: 'IBM Plex Mono', monospace; font-size: 1.25rem; font-weight: 700; color: var(--text-dim); min-width: 56px; transition: color 0.1s; }
   .det-note.match { color: var(--green); }
   .det-note.close { color: var(--yellow); }
   .det-note.wrong { color: var(--red); }
   .det-cents { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--text-dim); }
 
-  /* Scale result */
-  .scale-complete {
-    display: none; text-align: center; padding: 28px 20px;
-    background: linear-gradient(135deg, rgba(52,211,153,0.06), rgba(124,106,247,0.06));
+  /* Complete */
+  .complete {
+    display: none; text-align: center; padding: 36px 20px;
+    background: linear-gradient(135deg, rgba(52,211,153,0.05), rgba(124,106,247,0.05));
     border-top: 1px solid var(--border);
   }
-  .scale-complete.show { display: block; }
-  .scale-complete-icon { font-size: 3rem; margin-bottom: 8px; }
-  .scale-complete-title { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--green); margin-bottom: 6px; }
-  .scale-complete-sub { font-size: 0.82rem; color: var(--text-dim); }
+  .complete.show { display: block; }
+  .complete-icon { font-size: 3.5rem; margin-bottom: 10px; }
+  .complete-title { font-family: 'DM Serif Display', serif; font-size: 1.8rem; color: var(--green); }
+  .complete-sub { font-size: 0.82rem; color: var(--text-dim); margin-top: 6px; }
   .btn-retry {
-    margin-top: 16px; padding: 10px 24px;
+    margin-top: 18px; padding: 10px 28px;
     background: transparent; border: 1.5px solid var(--green);
     border-radius: 20px; color: var(--green);
-    font-family: 'Noto Sans KR', sans-serif; font-size: 0.85rem;
-    cursor: pointer; transition: all 0.2s;
+    font-family: 'Noto Sans KR', sans-serif; font-size: 0.88rem;
+    cursor: pointer; transition: all 0.18s;
   }
   .btn-retry:hover { background: rgba(52,211,153,0.1); }
 
-  .btn-replay {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 8px 18px;
-    background: transparent;
-    border: 1.5px solid var(--border);
-    border-radius: 20px; color: var(--text-mid);
-    font-family: 'Noto Sans KR', sans-serif; font-size: 0.82rem;
-    cursor: pointer; transition: all 0.2s; margin-left: auto;
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 20px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 16px; font-size: 0.8rem; color: var(--text);
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); z-index: 100; max-width: 300px;
   }
-  .btn-replay:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(192,132,252,0.08); }
-  .btn-replay:active { transform: scale(0.96); }
-  .btn-replay.playing {
-    border-color: var(--accent); color: var(--accent);
-    background: rgba(124,106,247,0.1);
-    animation: replay-pulse 0.6s ease-in-out infinite alternate;
-  }
-  @keyframes replay-pulse {
-    from { box-shadow: 0 0 0 rgba(124,106,247,0); }
-    to   { box-shadow: 0 0 10px rgba(124,106,247,0.4); }
-  }
-
-  /* ── 실시간 음정 감지 ── */
-  .live-pitch-section {
-    margin-bottom: 28px;
-  }
-
-  .btn-live {
-    display: flex; align-items: center; gap: 10px;
-    padding: 13px 22px;
-    background: transparent;
-    border: 1.5px solid var(--border);
-    border-radius: 12px; color: var(--text-mid);
-    font-family: 'Noto Sans KR', sans-serif; font-size: 0.9rem; font-weight: 500;
-    cursor: pointer; transition: all 0.2s;
-    width: 100%;
-    justify-content: center;
-  }
-  .btn-live:hover { border-color: var(--accent); color: var(--accent2); background: rgba(124,106,247,0.05); }
-  .btn-live.active {
-    background: rgba(248,113,113,0.08);
-    border-color: rgba(248,113,113,0.5);
-    color: var(--red);
-  }
-  .btn-live .live-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--text-dim); flex-shrink: 0;
-    transition: background 0.2s;
-  }
-  .btn-live.active .live-dot {
-    background: var(--red);
-    box-shadow: 0 0 8px var(--red);
-    animation: pulse-dot 1s ease-in-out infinite;
-  }
-  @keyframes pulse-dot {
-    0%,100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.4); opacity: 0.7; }
-  }
-
-  .live-display {
-    display: none;
-    margin-top: 16px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-    transition: all 0.3s;
-  }
-  .live-display.show { display: block; }
-  .live-display.has-note { border-color: rgba(124,106,247,0.4); box-shadow: 0 0 28px rgba(124,106,247,0.12); }
-
-  .live-inner {
-    display: flex; align-items: stretch; gap: 0;
-  }
-
-  /* Big note name */
-  .live-note-big {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 28px 32px;
-    min-width: 160px;
-    background: var(--surface2);
-    border-right: 1px solid var(--border);
-    position: relative; overflow: hidden;
-  }
-  .live-note-big::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: radial-gradient(circle at center, rgba(124,106,247,0.08), transparent 70%);
-    opacity: 0; transition: opacity 0.3s;
-  }
-  .live-display.has-note .live-note-big::before { opacity: 1; }
-
-  .live-note-name {
-    font-family: 'DM Serif Display', serif;
-    font-size: 4.5rem; line-height: 1;
-    color: var(--text-dim);
-    transition: color 0.15s, transform 0.1s;
-    letter-spacing: -0.02em;
-  }
-  .live-display.has-note .live-note-name {
-    color: var(--accent2);
-    text-shadow: 0 0 30px rgba(192,132,252,0.5);
-  }
-  .live-note-octave {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 1rem; color: var(--text-dim);
-    margin-top: 4px;
-    transition: color 0.15s;
-  }
-  .live-display.has-note .live-note-octave { color: var(--accent); }
-
-  /* Right panel */
-  .live-details {
-    flex: 1; padding: 20px 24px;
-    display: flex; flex-direction: column; gap: 16px; justify-content: center;
-  }
-
-  .live-freq-row {
-    display: flex; align-items: baseline; gap: 8px;
-  }
-  .live-freq-val {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 1.8rem; font-weight: 600;
-    color: var(--text-dim); transition: color 0.15s;
-  }
-  .live-display.has-note .live-freq-val { color: var(--green); }
-  .live-freq-unit {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.8rem; color: var(--text-dim);
-  }
-
-  /* Tuning meter */
-  .tuning-meter-wrap {
-    display: flex; flex-direction: column; gap: 6px;
-  }
-  .tuning-label {
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem;
-    color: var(--text-dim); display: flex; justify-content: space-between;
-    letter-spacing: 0.05em;
-  }
-  .tuning-track {
-    height: 10px;
-    background: var(--surface2);
-    border-radius: 5px;
-    border: 1px solid var(--border);
-    position: relative;
-    overflow: hidden;
-  }
-  .tuning-center-line {
-    position: absolute; left: 50%; top: 0; bottom: 0;
-    width: 2px; background: rgba(255,255,255,0.1);
-    transform: translateX(-50%);
-  }
-  .tuning-needle {
-    position: absolute; top: 1px; bottom: 1px;
-    width: 6px; border-radius: 3px;
-    background: var(--text-dim);
-    left: calc(50% - 3px);
-    transition: left 0.08s ease-out, background 0.15s;
-  }
-
-  /* History chips */
-  .live-history {
-    display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px; align-items: center;
-  }
-  .history-chip {
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem;
-    padding: 3px 9px; border-radius: 6px;
-    background: var(--surface2); color: var(--text-mid);
-    border: 1px solid var(--border);
-    animation: chip-in 0.2s cubic-bezier(0.34,1.56,0.64,1);
-  }
-  @keyframes chip-in {
-    from { transform: scale(0.7); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-  }
-  .history-chip:first-child {
-    background: rgba(124,106,247,0.12);
-    color: var(--accent2);
-    border-color: rgba(124,106,247,0.3);
-  }
-
-  .live-hint {
-    font-size: 0.72rem; color: var(--text-dim); text-align: center;
-    padding: 12px; font-family: 'IBM Plex Mono', monospace;
-  }
-
-  @media (max-width: 520px) {
-    .live-inner { flex-direction: column; }
-    .live-note-big { border-right: none; border-bottom: 1px solid var(--border); padding: 20px; flex-direction: row; gap: 12px; min-width: unset; }
-    .live-note-name { font-size: 3rem; }
-  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.error { border-color: var(--red); }
+  .toast.success { border-color: var(--green); }
 </style>
 </head>
 <body>
 <div class="container">
 
   <header>
-    <div class="logo-mark">🎵</div>
+    <div class="logo-mark">🎹</div>
     <div>
-      <h1>Pitch Checker</h1>
-      <div class="subtitle">한로로 0+0 — 음정 분석 전용</div>
+      <h1>음계 트레이너</h1>
+      <div class="subtitle">도(C3) ~ 도(C6) · 3옥타브 · 3번 정답 통과</div>
     </div>
   </header>
 
-  <!-- Song Info -->
-  <div class="song-card">
-    <div class="song-thumb">🎶</div>
-    <div class="song-meta">
-      <div class="song-title">0+0</div>
-      <div class="song-artist">한로로 · 자몽살구클럽</div>
-      <div class="song-tags">
-        <span class="song-tag active">G장조</span>
-        <span class="song-tag active">♩=84</span>
-        <span class="song-tag active">4/4박자</span>
-        <span class="song-tag">인디팝</span>
-        <span class="song-tag">36마디</span>
-      </div>
-    </div>
-    <div class="score-loaded-badge">
-      ✓ 악보 내장됨
-    </div>
-  </div>
-
-  <!-- Scale Trainer -->
-  <div class="scale-trainer-section">
-    <div class="section-label">🎹 음계 연습 트레이너</div>
-    <button class="btn-scale-start" id="btnScale" onclick="toggleScaleTrainer()">
-      <span class="scale-dot"></span>
-      <span id="btnScaleText">도~도 음계 연습 시작 (3옥타브)</span>
-    </button>
-
-    <div class="scale-panel" id="scalePanel">
-      <!-- Piano keyboard -->
-      <div class="scale-keyboard" id="scaleKeyboard"></div>
-
-      <div class="scale-body">
-        <!-- Progress dots -->
-        <div class="scale-dots" id="scaleDots"></div>
-
-        <!-- Target note -->
-        <div class="scale-target-area">
-          <div class="scale-target-note" id="scaleTargetNote">—</div>
-          <div class="scale-target-info">
-            <div class="scale-target-label">지금 낼 음</div>
-            <div class="scale-target-ko" id="scaleTargetKo">—</div>
-            <div class="scale-target-freq" id="scaleTargetFreq">— Hz</div>
-            <div class="scale-target-oct" id="scaleTargetOct"></div>
-          </div>
-          <button class="btn-replay" id="btnReplay" onclick="replayCurrentTone()">
-            🔊 다시 듣기
-          </button>
-        </div>
-
-        <!-- 6 attempt circles -->
-        <div class="attempts-row">
-          <span class="attempts-label">연속 성공</span>
-          <div id="attemptCircles" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
-        </div>
-
-        <!-- Detected note -->
-        <div class="scale-detected-row">
-          <span class="det-label">감지된 음</span>
-          <span class="det-note" id="detNote">—</span>
-          <span class="det-cents" id="detCents"></span>
-        </div>
-      </div>
-
-      <!-- Complete screen -->
-      <div class="scale-complete" id="scaleComplete">
-        <div class="scale-complete-icon">🎉</div>
-        <div class="scale-complete-title">음계 완주!</div>
-        <div class="scale-complete-sub" id="scaleCompleteStats">도~도 3옥타브를 모두 통과했습니다!</div>
-        <button class="btn-retry" onclick="restartScale()">🔄 다시 시작</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Live Pitch Detector -->
-  <div class="live-pitch-section">
-    <div class="section-label">🎙 실시간 음정 감지</div>
-    <button class="btn-live" id="btnLive" onclick="toggleLivePitch()">
-      <span class="live-dot"></span>
-      <span id="btnLiveText">실시간 음정 감지 시작</span>
-    </button>
-
-    <div class="live-display" id="liveDisplay">
-      <div class="live-inner">
-        <div class="live-note-big">
-          <div class="live-note-name" id="liveNoteName">—</div>
-          <div class="live-note-octave" id="liveNoteOctave">oct —</div>
-        </div>
-        <div class="live-details">
-          <div class="live-freq-row">
-            <span class="live-freq-val" id="liveFreqVal">—</span>
-            <span class="live-freq-unit">Hz</span>
-          </div>
-          <div class="tuning-meter-wrap">
-            <div class="tuning-label"><span>♭ 낮음</span><span>정확</span><span>높음 ♯</span></div>
-            <div class="tuning-track">
-              <div class="tuning-center-line"></div>
-              <div class="tuning-needle" id="tuningNeedle"></div>
-            </div>
-          </div>
-          <div class="live-history" id="liveHistory"></div>
-        </div>
-      </div>
-      <div class="live-hint" id="liveHint">마이크에 소리를 내보세요...</div>
-    </div>
-  </div>
-
-  <!-- Audio Upload Only -->
-  <div class="upload-section">
-    <div class="section-label">🎤 분석할 음성 파일 업로드</div>
-    <div class="upload-card" id="audioCard">
-      <div class="card-header">
-        <span class="card-icon">🎤</span>
-        <span class="card-label">음성 파일</span>
-        <span class="card-ext">.mp3 / .wav / .m4a / .ogg</span>
-      </div>
-      <div class="drop-zone" id="audioZone">
-        <input type="file" id="audioFile" accept=".mp3,.wav,.m4a,.aac,.ogg,.flac">
-        <div class="drop-icon">🔊</div>
-        <div class="drop-text">분석할 커버 음성 파일을 드래그하거나<br>클릭하여 업로드하세요</div>
-      </div>
-      <div class="file-info" id="audioInfo"></div>
-    </div>
-  </div>
-
-  <!-- Options -->
-  <div class="options-bar">
-    <div class="option-group">
-      <span class="option-label">허용 오차 (cents)</span>
-      <input type="range" id="toleranceRange" min="10" max="100" value="50" step="5">
-      <span class="range-val" id="toleranceVal">50¢</span>
-    </div>
-    <div class="option-group">
-      <span class="option-label">시작 오프셋 (초)</span>
-      <input type="range" id="offsetRange" min="0" max="15" value="0" step="0.5">
-      <span class="range-val" id="offsetVal">0s</span>
-    </div>
-    <div class="option-group">
-      <span class="option-label">템포 보정 (%)</span>
-      <input type="range" id="tempoRange" min="70" max="130" value="100" step="1">
-      <span class="range-val" id="tempoVal">100%</span>
-    </div>
-  </div>
-
-  <button class="btn-analyze" id="analyzeBtn" disabled>
-    🔍 음정 분석 시작
+  <button class="btn-start" id="btnStart" onclick="toggleTrainer()">
+    <span class="start-dot"></span>
+    <span id="btnStartText">연습 시작하기</span>
   </button>
 
-  <!-- Progress -->
-  <div class="progress-wrap" id="progressWrap">
-    <div class="progress-label">
-      <span id="progressText">분석 준비 중...</span>
-      <span id="progressPct">0%</span>
+  <div class="panel" id="panel">
+
+    <!-- Piano keyboard -->
+    <div class="keyboard-wrap">
+      <div class="keyboard" id="keyboard"></div>
     </div>
-    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-  </div>
 
-  <!-- Results -->
-  <div class="results-section" id="resultsSection">
+    <div class="panel-body">
 
-    <div class="accuracy-ring-wrap">
-      <svg width="100" height="100" viewBox="0 0 100 100" style="flex-shrink:0">
-        <circle cx="50" cy="50" r="42" fill="none" stroke="#2a2a3d" stroke-width="10"/>
-        <circle cx="50" cy="50" r="42" fill="none" stroke="url(#ringGrad)" stroke-width="10"
-          stroke-linecap="round" stroke-dasharray="264" stroke-dashoffset="264"
-          transform="rotate(-90 50 50)" id="ringCircle"/>
-        <defs>
-          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#34d399"/>
-            <stop offset="100%" stop-color="#7c6af7"/>
-          </linearGradient>
-        </defs>
-      </svg>
-      <div class="score-details">
-        <div class="score-big" id="accuracyNum">—</div>
-        <div class="score-label">음정 정확도</div>
-        <div class="stat-row">
-          <div class="stat-item"><div class="stat-val ok" id="statOk">—</div><div class="stat-lbl">✓ 정확</div></div>
-          <div class="stat-item"><div class="stat-val warn" id="statWarn">—</div><div class="stat-lbl">△ 약간 틀림</div></div>
-          <div class="stat-item"><div class="stat-val err" id="statErr">—</div><div class="stat-lbl">✗ 오류</div></div>
-          <div class="stat-item"><div class="stat-val" id="statTotal" style="color:var(--text-mid)">—</div><div class="stat-lbl">전체</div></div>
+      <!-- Progress dots -->
+      <div class="prog-dots" id="progDots"></div>
+
+      <!-- Target card with nav -->
+      <div class="target-card">
+        <button class="nav-btn" id="btnPrev" onclick="navigate(-1)">◀</button>
+        <div class="target-center">
+          <div class="target-name" id="targetName">—</div>
+          <div class="target-ko"   id="targetKo">—</div>
+          <div class="target-freq" id="targetFreq">— Hz</div>
+          <div class="target-oct"  id="targetOct"></div>
+          <button class="btn-replay" id="btnReplay" onclick="replayTone()">🔊 다시 듣기</button>
+        </div>
+        <button class="nav-btn" id="btnNext" onclick="navigate(1)">▶</button>
+      </div>
+
+      <!-- Hit circles -->
+      <div class="hits-row">
+        <span class="hits-label">정답 횟수</span>
+        <div class="hit-circles" id="hitCircles"></div>
+      </div>
+
+      <!-- Sustain bar -->
+      <div class="sustain-wrap">
+        <div class="sustain-top">
+          <span>음 유지 시간 (2초 유지 = 1회 정답)</span>
+          <span id="sustainPct">0%</span>
+        </div>
+        <div class="sustain-track">
+          <div class="sustain-fill" id="sustainFill"></div>
         </div>
       </div>
-    </div>
 
-    <!-- Error Summary -->
-    <div class="error-summary" id="errorSummary" style="display:none">
-      <div class="error-summary-title">⚠ 틀린 음정 요약</div>
-      <div id="errorList"></div>
-    </div>
-
-    <div class="section-heading">타임라인</div>
-    <div class="timeline-wrap">
-      <canvas class="timeline-canvas" id="timelineCanvas"></canvas>
-    </div>
-
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:12px;">
-      <div style="font-family:'DM Serif Display',serif; font-size:1.4rem;">음표별 분석 결과</div>
-    </div>
-
-    <div class="filter-tabs">
-      <button class="filter-tab active" onclick="filterNotes('all',this)">전체</button>
-      <button class="filter-tab" onclick="filterNotes('error',this)">🔴 오류만</button>
-      <button class="filter-tab" onclick="filterNotes('warning',this)">🟡 경고만</button>
-      <button class="filter-tab" onclick="filterNotes('ok',this)">🟢 정확만</button>
-    </div>
-
-    <div class="notes-wrap">
-      <div class="notes-table-header">
-        <span>#</span><span>악보 음</span><span>기준 Hz</span><span>감지 Hz</span><span>오차 (cents)</span><span>상태</span>
+      <!-- Detected note -->
+      <div class="det-bar">
+        <span class="det-lbl">감지된 음</span>
+        <span class="det-note" id="detNote">—</span>
+        <span class="det-cents" id="detCents"></span>
       </div>
-      <div id="notesBody"></div>
+
+    </div>
+
+    <!-- Complete screen -->
+    <div class="complete" id="completeScreen">
+      <div class="complete-icon">🎉</div>
+      <div class="complete-title">음계 완주!</div>
+      <div class="complete-sub" id="completeSub"></div>
+      <button class="btn-retry" onclick="restartTrainer()">🔄 다시 시작</button>
     </div>
 
   </div>
@@ -903,849 +320,335 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ─── 한로로 0+0 내장 악보 (G장조, ♩=84, 4/4박자) ──────────────────────────────
-// 각 음표: { note: 표시명, freq: Hz, startSec: 시작시간(초), durationSec: 길이(초) }
-// 템포 84bpm → 1박 = 60/84 ≈ 0.714초, 온음표=2.857초, 반음표=1.429초, 4분음표=0.714초
-const BEAT = 60 / 84;
-const HALF = BEAT * 2;
-const WHOLE = BEAT * 4;
-const QTR = BEAT;
+// ═══ 음계 데이터 C3~C6 ═══════════════════════════════════
+const KO    = {C:'도','C#':'도#',D:'레','D#':'레#',E:'미',F:'파','F#':'파#',G:'솔','G#':'솔#',A:'라','A#':'라#',B:'시'};
+const SEMIS = {C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11};
+const REQUIRED = 3;       // 정답 3회면 다음 음
+const SUSTAIN_MS = 2000;  // 2초 유지 = 1회 정답
+const HIT_CENTS  = 60;    // ±60¢ 허용
 
-function hz(step, octave, alter) {
-  const sem = { C:0,D:2,E:4,F:5,G:7,A:9,B:11 };
-  const midi = (octave + 1) * 12 + sem[step] + (alter||0);
-  return 440 * Math.pow(2, (midi - 69) / 12);
-}
-
-// 악보 데이터: [step, octave, alter, startBeat, durationBeats]
-// alter: 1=샵, -1=플랫, 0=없음
-const scoreData = [
-  // Measure 1 — 검은 눈동
-  ['D',4,0, 0,2], ['E',4,0, 2,2],
-  // Measure 2 — 자의 사각
-  ['F',4,1, 4,2], ['E',4,0, 6,2],
-  // Measure 3 — 지대를 찾
-  ['D',4,0, 8,2], ['B',3,0, 10,2],
-  // Measure 4 — 으러 가자
-  ['A',3,0, 12,2], ['G',3,0, 14,2],
-  // Measure 5 — 여름 코코아
-  ['D',4,0, 16,2], ['E',4,0, 18,2],
-  // Measure 6 — 겨울 수박도
-  ['F',4,1, 20,2], ['E',4,0, 22,2],
-  // Measure 7 — 혼나지 않는
-  ['D',4,0, 24,2], ['C',4,1, 26,2],
-  // Measure 8 — 파라다이스
-  ['B',3,0, 28,2], ['A',3,0, 30,2],
-  // Measure 9 — 앞서가는 너의
-  ['G',4,0, 32,2], ['F',4,1, 34,2],
-  // Measure 10 — 머리가
-  ['E',4,0, 36,2], ['D',4,0, 38,4],
-  // Measure 11 — 두 눈에 (pre-chorus)
-  ['E',4,0, 42,2], ['F',4,1, 44,2],
-  // Measure 12
-  ['G',4,0, 46,2], ['A',4,0, 48,2],  // ← 48박 = 마디12끝 (마디 당 4박)
-  // Measure 13 — Chorus 이게 뭔지
-  ['B',4,0, 50,2], ['A',4,0, 52,2],
-  // Measure 14
-  ['G',4,0, 54,2], ['F',4,1, 56,2],
-  // Measure 15 — 모르겠어
-  ['E',4,0, 58,2], ['D',4,0, 60,2],
-  // Measure 16
-  ['B',3,0, 62,2], ['A',3,0, 64,2],
-  // Measure 17 — 0+0 타이틀
-  ['G',4,0, 66,2], ['G',4,0, 68,2],
-  // Measure 18
-  ['F',4,1, 70,2], ['E',4,0, 72,2],
-  // Measure 19
-  ['D',4,0, 74,2], ['C',4,1, 76,2],
-  // Measure 20
-  ['B',3,0, 78,4],
-  // Measure 21 — Verse 2: 저너머의
-  ['D',4,0, 82,2], ['E',4,0, 84,2],
-  // Measure 22
-  ['F',4,1, 86,2], ['G',4,0, 88,2],
-  // Measure 23 — 결코 우리가
-  ['F',4,1, 90,2], ['E',4,0, 92,2],
-  // Measure 24 — 될 수 없단다
-  ['D',4,0, 94,2], ['B',3,0, 96,2],
-  // Measure 25
-  ['A',3,0, 98,2], ['G',3,0, 100,2],
-  // Measure 26 — Bridge 상행
-  ['G',4,0, 102,1], ['A',4,0, 103,1], ['B',4,0, 104,1], ['A',4,0, 105,1],
-  // Measure 27
-  ['G',4,0, 106,1], ['F',4,1, 107,1], ['E',4,0, 108,2],
-  // Measure 28
-  ['D',4,0, 110,2], ['E',4,0, 112,2],
-  // Measure 29
-  ['F',4,1, 114,2], ['G',4,0, 116,2],
-  // Measure 30 — Final Chorus 클라이맥스
-  ['A',4,0, 118,2], ['B',4,0, 120,2],
-  // Measure 31
-  ['A',4,0, 122,2], ['G',4,0, 124,2],
-  // Measure 32
-  ['F',4,1, 126,2], ['E',4,0, 128,2],
-  // Measure 33
-  ['D',4,0, 130,4],
-  // Measure 34-36 Outro
-  ['G',3,0, 134,2], ['B',3,0, 136,2],
-  ['D',4,0, 138,2], ['G',4,0, 140,2],
-  ['G',4,0, 142,4],
-];
-
-const stepNames = { C:'C', D:'D', E:'E', F:'F', G:'G', A:'A', B:'B' };
-const scoreNotes = scoreData.map(([step, octave, alter, startBeat, durBeats]) => ({
-  note: step + (alter===1?'#':alter===-1?'b':'') + octave,
-  freq: hz(step, octave, alter),
-  startSec: startBeat * BEAT,
-  durationSec: durBeats * BEAT,
-}));
-
-// ─── State
-let audioBuffer = null;
-let analysisResults = [];
-
-// ─── UI helpers
-function showToast(msg, type='') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show ' + type;
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.className = 'toast', 3500);
-}
-
-function setProgress(pct, text) {
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressPct').textContent = pct + '%';
-  if (text) document.getElementById('progressText').textContent = text;
-}
-
-document.getElementById('toleranceRange').addEventListener('input', e => { document.getElementById('toleranceVal').textContent = e.target.value + '¢'; });
-document.getElementById('offsetRange').addEventListener('input', e => { document.getElementById('offsetVal').textContent = e.target.value + 's'; });
-document.getElementById('tempoRange').addEventListener('input', e => { document.getElementById('tempoVal').textContent = e.target.value + '%'; });
-
-// ─── File Upload
-const audioZone = document.getElementById('audioZone');
-const audioInput = document.getElementById('audioFile');
-const audioInfo = document.getElementById('audioInfo');
-const audioCard = document.getElementById('audioCard');
-
-audioInput.addEventListener('change', e => { if(e.target.files[0]) handleAudio(e.target.files[0]); });
-audioZone.addEventListener('dragover', e => { e.preventDefault(); audioZone.classList.add('drag-over'); });
-audioZone.addEventListener('dragleave', () => audioZone.classList.remove('drag-over'));
-audioZone.addEventListener('drop', e => {
-  e.preventDefault(); audioZone.classList.remove('drag-over');
-  if(e.dataTransfer.files[0]) { audioInput.files = e.dataTransfer.files; handleAudio(e.dataTransfer.files[0]); }
-});
-
-function handleAudio(file) {
-  audioInfo.textContent = `✓ ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`;
-  audioInfo.classList.add('show');
-  audioCard.classList.add('has-file');
-  loadAudio(file);
-}
-
-function loadAudio(file) {
-  const reader = new FileReader();
-  reader.onload = async e => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      audioBuffer = await ctx.decodeAudioData(e.target.result);
-      document.getElementById('analyzeBtn').disabled = false;
-      showToast(`오디오 로드 완료: ${audioBuffer.duration.toFixed(1)}초`, 'success');
-    } catch(err) {
-      showToast('오디오 로드 오류: ' + err.message, 'error');
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-// ─── YIN Pitch Detection
-function detectPitch(audioData, sampleRate) {
-  const bufSize = 2048;
-  const threshold = 0.15;
-  const yin = new Float32Array(bufSize / 2);
-  for (let tau = 0; tau < bufSize/2; tau++) {
-    yin[tau] = 0;
-    for (let j = 0; j < bufSize/2; j++) {
-      const d = audioData[j] - audioData[j+tau];
-      yin[tau] += d*d;
-    }
-  }
-  yin[0] = 1;
-  let rs = 0;
-  for (let tau = 1; tau < bufSize/2; tau++) {
-    rs += yin[tau];
-    yin[tau] *= tau / rs;
-  }
-  let tau = 2;
-  while (tau < bufSize/2) {
-    if (yin[tau] < threshold) {
-      while (tau+1 < bufSize/2 && yin[tau+1] < yin[tau]) tau++;
-      const s0 = tau>0?yin[tau-1]:yin[tau], s1=yin[tau], s2=tau<bufSize/2-1?yin[tau+1]:yin[tau];
-      return sampleRate / (tau + (s2-s0)/(2*(2*s1-s2-s0)));
-    }
-    tau++;
-  }
-  let minVal=Infinity, minTau=-1;
-  for (let i=2; i<bufSize/2; i++) { if(yin[i]<minVal){minVal=yin[i];minTau=i;} }
-  return minTau>0 ? sampleRate/minTau : -1;
-}
-
-function freqToCents(det, ref) {
-  if (det<=0||ref<=0) return null;
-  return 1200 * Math.log2(det/ref);
-}
-
-// ─── Main Analysis
-document.getElementById('analyzeBtn').addEventListener('click', async () => {
-  if (!audioBuffer) return;
-  const tolerance = parseFloat(document.getElementById('toleranceRange').value);
-  const offset = parseFloat(document.getElementById('offsetRange').value);
-  const tempoFactor = parseFloat(document.getElementById('tempoRange').value) / 100;
-
-  document.getElementById('progressWrap').classList.add('show');
-  document.getElementById('resultsSection').classList.remove('show');
-  document.getElementById('analyzeBtn').disabled = true;
-
-  const sampleRate = audioBuffer.sampleRate;
-  const channelData = audioBuffer.getChannelData(0);
-  analysisResults = [];
-  const total = scoreNotes.length;
-
-  for (let i = 0; i < total; i++) {
-    const n = scoreNotes[i];
-    setProgress(Math.round((i/total)*90), `음표 ${i+1}/${total} 분석 중 (${n.note})...`);
-
-    const startSec = (n.startSec / tempoFactor) + offset;
-    const durSec = n.durationSec / tempoFactor;
-    const analysisStart = startSec + Math.min(0.05, durSec * 0.15);
-    const analysisEnd = startSec + durSec - Math.min(0.05, durSec * 0.15);
-
-    const frames = [];
-    const step = Math.max(durSec * 0.15, 0.03);
-    for (let t = analysisStart; t < analysisEnd - 0.05; t += step) {
-      const s0 = Math.floor(t * sampleRate);
-      if (s0 + 2048 > channelData.length) break;
-      const frame = channelData.slice(s0, s0+2048);
-      const rms = Math.sqrt(frame.reduce((acc,v)=>acc+v*v,0)/frame.length);
-      if (rms > 0.004) {
-        const f = detectPitch(frame, sampleRate);
-        if (f > 60 && f < 2000) frames.push(f);
-      }
-    }
-
-    let detectedFreq = -1, centsOff = null, status = 'skip';
-    if (frames.length > 0) {
-      frames.sort((a,b)=>a-b);
-      detectedFreq = frames[Math.floor(frames.length/2)];
-      centsOff = freqToCents(detectedFreq, n.freq);
-      if (centsOff !== null) {
-        const abs = Math.abs(centsOff);
-        status = abs <= tolerance*0.5 ? 'ok' : abs <= tolerance ? 'warning' : 'error';
-      }
-    }
-
-    analysisResults.push({ index:i+1, note:n.note, refFreq:n.freq, detectedFreq, centsOff, status, startSec:n.startSec });
-    if (i%5===0) await new Promise(r=>setTimeout(r,0));
-  }
-
-  setProgress(100, '분석 완료!');
-  setTimeout(() => {
-    document.getElementById('progressWrap').classList.remove('show');
-    renderResults();
-    document.getElementById('analyzeBtn').disabled = false;
-  }, 400);
-});
-
-// ─── Render Results
-function renderResults() {
-  const section = document.getElementById('resultsSection');
-  section.classList.add('show');
-
-  const ok = analysisResults.filter(r=>r.status==='ok').length;
-  const warn = analysisResults.filter(r=>r.status==='warning').length;
-  const err = analysisResults.filter(r=>r.status==='error').length;
-  const total = analysisResults.length;
-  const analyzed = ok+warn+err;
-  const accuracy = analyzed>0 ? Math.round((ok/analyzed)*100) : 0;
-
-  const circle = document.getElementById('ringCircle');
-  setTimeout(()=>circle.style.strokeDashoffset = 264*(1-accuracy/100), 100);
-  document.getElementById('accuracyNum').textContent = accuracy+'%';
-  document.getElementById('statOk').textContent = ok;
-  document.getElementById('statWarn').textContent = warn;
-  document.getElementById('statErr').textContent = err;
-  document.getElementById('statTotal').textContent = total;
-
-  // Error summary
-  const errResults = analysisResults.filter(r=>r.status==='error');
-  const errSummary = document.getElementById('errorSummary');
-  const errList = document.getElementById('errorList');
-  if (errResults.length > 0) {
-    errSummary.style.display = 'block';
-    errList.innerHTML = errResults.map(r => {
-      const dir = r.centsOff > 0 ? '▲ 음정이 높음' : '▼ 음정이 낮음';
-      const diff = r.centsOff !== null ? `${Math.abs(r.centsOff).toFixed(0)}¢ ${dir}` : '미감지';
-      const detHz = r.detectedFreq > 0 ? `(감지: ${r.detectedFreq.toFixed(1)}Hz)` : '';
-      return `<div class="error-item"><span class="error-note-tag">#${r.index} ${r.note}</span>기준 ${r.refFreq.toFixed(1)}Hz → ${diff} ${detHz}</div>`;
-    }).join('');
-  } else {
-    errSummary.style.display = 'none';
-  }
-
-  drawTimeline();
-  filterNotes('all', document.querySelector('.filter-tab'));
-  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  showToast(`분석 완료! 정확도 ${accuracy}% (오류 ${err}개)`, accuracy>=80?'success':'');
-}
-
-function renderNotes(filter) {
-  const body = document.getElementById('notesBody');
-  let rows = analysisResults;
-  if (filter==='error') rows=rows.filter(r=>r.status==='error');
-  else if (filter==='warning') rows=rows.filter(r=>r.status==='warning');
-  else if (filter==='ok') rows=rows.filter(r=>r.status==='ok');
-
-  if (rows.length===0) {
-    body.innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div>해당하는 음표가 없습니다.</div>';
-    return;
-  }
-
-  body.innerHTML = rows.map(r => {
-    const statusClass = r.status==='error'?'error':r.status==='warning'?'warning':'';
-    const pill = r.status==='ok'?'<span class="status-pill pill-ok">✓ 정확</span>'
-      :r.status==='warning'?'<span class="status-pill pill-warn">△ 약간 틀림</span>'
-      :r.status==='error'?'<span class="status-pill pill-err">✗ 오류</span>'
-      :'<span class="status-pill pill-skip">— 미감지</span>';
-    const detHz = r.detectedFreq>0 ? r.detectedFreq.toFixed(1)+' Hz' : '—';
-    const detColor = r.status==='ok'?'var(--green)':r.status==='warning'?'var(--yellow)':r.status==='error'?'var(--red)':'var(--text-dim)';
-    let centBarHTML = '';
-    if (r.centsOff!==null) {
-      const maxC=200, clamp=Math.max(-maxC,Math.min(maxC,r.centsOff));
-      const pct=((clamp+maxC)/(maxC*2))*100;
-      const bc=r.status==='ok'?'var(--green)':r.status==='warning'?'var(--yellow)':'var(--red)';
-      const centsStr = (r.centsOff>0?'+':'')+r.centsOff.toFixed(0)+'¢';
-      centBarHTML=`<div class="cent-bar-wrap"><div class="cent-bar"><div class="cent-center"></div><div class="cent-marker" style="left:${Math.min(50,pct)}%;width:${Math.abs(pct-50)*1.2}%;background:${bc};${pct<50?'transform-origin:right':'transform-origin:left'}"></div></div><span class="cent-val">${centsStr}</span></div>`;
-    } else {
-      centBarHTML='<span class="cent-val" style="color:var(--text-dim)">—</span>';
-    }
-    return `<div class="note-row ${statusClass}"><span class="note-num">${r.index}</span><span class="note-name">${r.note}</span><span class="note-freq">${r.refFreq.toFixed(1)} Hz</span><span class="note-detected" style="color:${detColor}">${detHz}</span>${centBarHTML}${pill}</div>`;
-  }).join('');
-}
-
-window.filterNotes = function(type, btn) {
-  document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  else document.querySelector('.filter-tab').classList.add('active');
-  renderNotes(type);
-};
-
-function drawTimeline() {
-  const canvas = document.getElementById('timelineCanvas');
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio||1;
-  const W = canvas.offsetWidth, H = 120;
-  canvas.width=W*dpr; canvas.height=H*dpr;
-  ctx.scale(dpr,dpr);
-  ctx.clearRect(0,0,W,H);
-  const maxTime = Math.max(...analysisResults.map(r=>r.startSec))+2;
-  const pad=8, labW=24;
-  ctx.fillStyle='rgba(124,106,247,0.03)'; ctx.fillRect(0,0,W,H);
-  ctx.strokeStyle='#2a2a3d'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
-  ctx.beginPath(); ctx.moveTo(pad+labW,H/2); ctx.lineTo(W-pad,H/2); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.font='9px IBM Plex Mono'; ctx.fillStyle='#3d3a55'; ctx.textAlign='right';
-  ctx.fillText('+100¢',pad+labW,H*0.2+3);
-  ctx.fillText('0¢',pad+labW,H/2+3);
-  ctx.fillText('-100¢',pad+labW,H*0.8+3);
-  const maxCents=100;
-  analysisResults.forEach(r => {
-    if(r.status==='skip') return;
-    const x=pad+labW+((r.startSec/maxTime)*(W-pad*2-labW));
-    const cents=r.centsOff||0;
-    const y=H/2-(cents/maxCents)*(H/2-pad-10);
-    const color=r.status==='ok'?'#34d399':r.status==='warning'?'#fbbf24':'#f87171';
-    ctx.strokeStyle=color+'44'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(x,H/2); ctx.lineTo(x,y); ctx.stroke();
-    if(r.status==='error'){ctx.fillStyle=color+'22';ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.fill();}
-    ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,r.status==='error'?5:3.5,0,Math.PI*2); ctx.fill();
-  });
-}
-
-window.addEventListener('resize',()=>{ if(analysisResults.length>0) drawTimeline(); });
-
-window.addEventListener('resize',()=>{ if(analysisResults.length>0) drawTimeline(); });
-
-// ═══════════════════════════════════════════════════════════
-// 🎹 음계 연습 트레이너
-// ═══════════════════════════════════════════════════════════
-const SCALE_NOTES_KO = { C:'도',D:'레',E:'미',F:'파',G:'솔',A:'라',B:'시' };
-const REQUIRED_HITS = 6;         // 연속으로 맞춰야 하는 횟수
-const HIT_TOLERANCE_CENTS = 60;  // ±60¢ 이내면 정확
-
-// 도~도 3옥타브: C3~C6 (흰건반 22음 + 시작·끝 도)
-// 모든 반음 포함 전체 음계 (C3 ~ C6)
-const SCALE_ALL = [];
+const SCALE = [];
 for (let oct = 3; oct <= 6; oct++) {
   const steps = oct < 6
     ? ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
     : ['C'];
-  steps.forEach(n => {
-    const isBlack = n.includes('#');
-    const midiNum = (oct+1)*12 + {C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11}[n];
-    SCALE_ALL.push({
-      name: n,
-      octave: oct,
-      midi: midiNum,
-      freq: 440 * Math.pow(2, (midiNum-69)/12),
-      isBlack,
-      ko: n.includes('#')
-        ? (SCALE_NOTES_KO[n[0]]||'') + '#'
-        : SCALE_NOTES_KO[n] || n,
-      label: n + oct
+  for (const n of steps) {
+    const midi = (oct + 1) * 12 + SEMIS[n];
+    SCALE.push({
+      name: n, octave: oct, ko: KO[n],
+      freq: 440 * Math.pow(2, (midi - 69) / 12),
+      isBlack: n.includes('#')
     });
-  });
-}
-
-let scaleMicStream = null, scaleAudioCtx = null, scaleAnalyser = null;
-let scaleAnimFrame = null, scaleActive = false;
-let scaleIndex = 0;
-let scaleHits = 0;       // 현재 음 연속 성공 횟수
-let scaleTotalOk = 0, scaleTotalFail = 0;
-let scaleLastDetected = '';
-let scaleHitCooldown = false;
-
-async function toggleScaleTrainer() {
-  if (!scaleActive) {
-    await startScaleTrainer();
-  } else {
-    stopScaleTrainer();
   }
 }
 
-async function startScaleTrainer() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showToast('이 브라우저는 마이크를 지원하지 않아요. Chrome을 사용해주세요.', 'error');
-    return;
+// ═══ State ════════════════════════════════════════════════
+let active = false, micStream = null, audioCtx = null, analyser = null, rafId = null;
+let curIdx = 0, hits = 0, totalOk = 0, totalFail = 0;
+let sustainStart = null, sustainAcc = 0;
+
+// ═══ Toast ════════════════════════════════════════════════
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show ' + type;
+  clearTimeout(el._t); el._t = setTimeout(() => el.className = 'toast', 3400);
+}
+
+// ═══ Start / Stop ═════════════════════════════════════════
+async function toggleTrainer() {
+  active ? stopTrainer() : await startTrainer();
+}
+
+async function startTrainer() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    toast('이 브라우저는 마이크를 지원하지 않아요.', 'error'); return;
   }
   try {
-    scaleMicStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch(e) {
-    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
-      showToast('마이크 권한이 거부됐어요. 주소창 왼쪽 🔒 아이콘 → 마이크 → 허용 후 새로고침!', 'error');
-    } else if (e.name === 'NotFoundError') {
-      showToast('마이크를 찾을 수 없어요. 마이크가 연결되어 있는지 확인해주세요.', 'error');
-    } else {
-      showToast('마이크 오류: ' + e.name + ' — ' + e.message, 'error');
-    }
+    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError')
+      toast('마이크 권한을 허용해주세요. 🔒 → 마이크 → 허용 후 새로고침', 'error');
+    else if (e.name === 'NotFoundError')
+      toast('마이크를 찾을 수 없어요.', 'error');
+    else
+      toast('마이크 오류: ' + e.name, 'error');
     return;
   }
-  scaleAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const src = scaleAudioCtx.createMediaStreamSource(scaleMicStream);
-  scaleAnalyser = scaleAudioCtx.createAnalyser();
-  scaleAnalyser.fftSize = 4096;
-  scaleAnalyser.smoothingTimeConstant = 0.3;
-  src.connect(scaleAnalyser);
 
-  scaleActive = true;
-  scaleIndex = 0;
-  scaleHits = 0;
-  scaleTotalOk = 0;
-  scaleTotalFail = 0;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 4096;
+  analyser.smoothingTimeConstant = 0.3;
+  audioCtx.createMediaStreamSource(micStream).connect(analyser);
 
-  document.getElementById('btnScale').classList.add('active');
-  document.getElementById('btnScaleText').textContent = '음계 연습 종료';
-  document.getElementById('scalePanel').classList.add('show');
-  document.getElementById('scaleComplete').classList.remove('show');
+  active = true; curIdx = 0; hits = 0; totalOk = 0; totalFail = 0;
+  sustainStart = null; sustainAcc = 0;
 
-  buildKeyboard();
-  buildDots();
-  updateScaleTarget();
-  scaleLoop();
+  document.getElementById('btnStart').classList.add('active');
+  document.getElementById('btnStartText').textContent = '연습 종료';
+  document.getElementById('panel').classList.add('show');
+  document.getElementById('completeScreen').classList.remove('show');
+
+  buildKeyboard(); buildDots(); gotoNote(0); loop();
 }
 
-function stopScaleTrainer() {
-  scaleActive = false;
-  if (scaleAnimFrame) cancelAnimationFrame(scaleAnimFrame);
-  if (scaleMicStream) scaleMicStream.getTracks().forEach(t=>t.stop());
-  if (scaleAudioCtx) scaleAudioCtx.close();
-
-  document.getElementById('btnScale').classList.remove('active');
-  document.getElementById('btnScaleText').textContent = '도~도 음계 연습 시작 (3옥타브)';
-  document.getElementById('scalePanel').classList.remove('show');
+function stopTrainer() {
+  active = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  if (audioCtx) audioCtx.close();
+  document.getElementById('btnStart').classList.remove('active');
+  document.getElementById('btnStartText').textContent = '연습 시작하기';
+  document.getElementById('panel').classList.remove('show');
 }
 
-function restartScale() {
-  scaleIndex = 0;
-  scaleHits = 0;
-  scaleTotalOk = 0;
-  scaleTotalFail = 0;
-  document.getElementById('scaleComplete').classList.remove('show');
-  buildDots();
-  updateScaleTarget();
-  scaleLoop();
+function restartTrainer() {
+  curIdx = 0; hits = 0; totalOk = 0; totalFail = 0;
+  sustainStart = null; sustainAcc = 0;
+  document.getElementById('completeScreen').classList.remove('show');
+  buildDots(); gotoNote(0);
+  if (active) loop();
 }
 
-// Build piano keyboard strip
+// ═══ Build UI ═════════════════════════════════════════════
 function buildKeyboard() {
-  const kb = document.getElementById('scaleKeyboard');
+  const kb = document.getElementById('keyboard');
   kb.innerHTML = '';
-  SCALE_ALL.forEach((n, i) => {
-    const key = document.createElement('div');
-    key.className = 'piano-key' + (n.isBlack ? ' black-key' : '');
-    key.id = 'key_' + i;
-    key.innerHTML = `<span class="key-label">${n.name}</span><span class="key-ko">${n.ko}</span>`;
-    kb.appendChild(key);
+  SCALE.forEach((n, i) => {
+    const k = document.createElement('div');
+    k.className = 'piano-key' + (n.isBlack ? ' black-key' : '');
+    k.id = 'key_' + i;
+    k.innerHTML = `<span class="key-label">${n.name}</span><span class="key-ko">${n.ko}</span>`;
+    k.addEventListener('click', () => { if (active) gotoNote(i); });
+    kb.appendChild(k);
   });
 }
 
-// Build progress dots
 function buildDots() {
-  const el = document.getElementById('scaleDots');
-  el.innerHTML = SCALE_ALL.map((n,i) =>
-    `<div class="scale-dot-item${i===0?' current-dot':''}" id="dot_${i}" title="${n.label}"></div>`
-  ).join('');
+  document.getElementById('progDots').innerHTML =
+    SCALE.map((_, i) => `<div class="pdot" id="pd_${i}"></div>`).join('');
 }
 
-function updateDots() {
-  SCALE_ALL.forEach((_,i) => {
-    const dot = document.getElementById('dot_'+i);
-    if (!dot) return;
-    dot.className = 'scale-dot-item' +
-      (i < scaleIndex ? ' done' :
-       i === scaleIndex ? ' current-dot' : '');
+function refreshDots() {
+  SCALE.forEach((_, i) => {
+    const d = document.getElementById('pd_' + i);
+    if (d) d.className = 'pdot' + (i < curIdx ? ' done' : i === curIdx ? ' cur' : '');
   });
 }
 
-function updateScaleTarget() {
-  if (scaleIndex >= SCALE_ALL.length) { finishScale(); return; }
-  const n = SCALE_ALL[scaleIndex];
-  scaleHits = 0;
-  scaleLastDetected = '';
-
-  // Target display
-  document.getElementById('scaleTargetNote').textContent = n.name;
-  document.getElementById('scaleTargetNote').className = 'scale-target-note active';
-  document.getElementById('scaleTargetKo').textContent = n.ko;
-  document.getElementById('scaleTargetFreq').textContent = n.freq.toFixed(2) + ' Hz';
-  document.getElementById('scaleTargetOct').textContent = n.octave + '옥타브';
-
-  // Highlight keyboard
-  SCALE_ALL.forEach((_,i) => {
-    const k = document.getElementById('key_'+i);
-    if (k) k.className = 'piano-key' + (SCALE_ALL[i].isBlack?' black-key':'');
+function refreshKeys() {
+  SCALE.forEach((n, i) => {
+    const k = document.getElementById('key_' + i);
+    if (!k) return;
+    k.className = 'piano-key' + (n.isBlack ? ' black-key' : '')
+      + (i < curIdx ? ' is-done' : i === curIdx ? ' is-current' : '');
   });
-  const curKey = document.getElementById('key_'+scaleIndex);
-  if (curKey) {
-    curKey.classList.add('current');
-    curKey.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
-  }
+  const cur = document.getElementById('key_' + curIdx);
+  if (cur) cur.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
 
-  updateDots();
-  renderAttemptCircles();
-  document.getElementById('detNote').textContent = '—';
-  document.getElementById('detNote').className = 'det-note';
+function renderHits() {
+  document.getElementById('hitCircles').innerHTML =
+    Array.from({ length: REQUIRED }, (_, i) => {
+      const cls = i < hits ? 'hc filled' : i === hits ? 'hc cur' : 'hc';
+      const txt = i < hits ? '✓' : i + 1;
+      return `<div class="${cls}">${txt}</div>`;
+    }).join('');
+}
+
+// ═══ Navigate ═════════════════════════════════════════════
+function navigate(dir) {
+  const next = curIdx + dir;
+  if (next >= 0 && next < SCALE.length) gotoNote(next);
+}
+
+function gotoNote(idx) {
+  curIdx = Math.max(0, Math.min(SCALE.length - 1, idx));
+  hits = 0; sustainStart = null; sustainAcc = 0;
+
+  const n = SCALE[curIdx];
+  document.getElementById('targetName').textContent = n.name;
+  document.getElementById('targetName').className   = 'target-name';
+  document.getElementById('targetKo').textContent   = n.ko;
+  document.getElementById('targetFreq').textContent = n.freq.toFixed(2) + ' Hz';
+  document.getElementById('targetOct').textContent  = n.octave + '옥타브';
+
+  document.getElementById('btnPrev').disabled = curIdx === 0;
+  document.getElementById('btnNext').disabled = curIdx === SCALE.length - 1;
+
+  document.getElementById('detNote').textContent  = '—';
+  document.getElementById('detNote').className    = 'det-note';
   document.getElementById('detCents').textContent = '';
-
-  // Play reference tone via Web Audio (short sine blip)
-  playReferenceTone(n.freq);
+  setSustain(0);
+  renderHits(); refreshDots(); refreshKeys();
+  playTone(n.freq);
 }
 
-function replayCurrentTone() {
-  if (scaleIndex >= SCALE_ALL.length) return;
-  const btn = document.getElementById('btnReplay');
-  btn.classList.add('playing');
-  btn.textContent = '🔊 재생 중...';
-  playReferenceTone(SCALE_ALL[scaleIndex].freq);
-  setTimeout(() => {
-    btn.classList.remove('playing');
-    btn.textContent = '🔊 다시 듣기';
-  }, 900);
+// ═══ Sustain bar ══════════════════════════════════════════
+function setSustain(ms) {
+  const pct = Math.min(100, (ms / SUSTAIN_MS) * 100);
+  const f = document.getElementById('sustainFill');
+  f.style.width = pct + '%';
+  f.className = 'sustain-fill' + (pct >= 100 ? ' done' : '');
+  document.getElementById('sustainPct').textContent = Math.round(pct) + '%';
 }
 
-function playReferenceTone(freq) {
+// ═══ Reference tone (1.5s — 2× 원본) ════════════════════
+function playTone(freq) {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
+    const ctx  = new (window.AudioContext || window.webkitAudioContext)();
+    const osc  = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
-    osc.frequency.value = freq;
-    osc.type = 'sine';
+    osc.frequency.value = freq; osc.type = 'sine';
     gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.05);
-    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.7);
+    gain.gain.linearRampToValueAtTime(0.28, ctx.currentTime + 0.06);
+    gain.gain.linearRampToValueAtTime(0.22, ctx.currentTime + 0.9);
+    gain.gain.linearRampToValueAtTime(0,    ctx.currentTime + 1.5);
     osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.75);
+    osc.stop(ctx.currentTime + 1.55);
     osc.onended = () => ctx.close();
   } catch(e) {}
 }
 
-function renderAttemptCircles() {
-  const el = document.getElementById('attemptCircles');
-  el.innerHTML = Array.from({length: REQUIRED_HITS}, (_,i) => {
-    let cls = 'attempt-circle';
-    let txt = i+1;
-    if (i < scaleHits) { cls += ' hit'; txt = '✓'; }
-    else if (i === scaleHits) cls += ' active-slot';
-    return `<div class="${cls}">${txt}</div>`;
-  }).join('');
+function replayTone() {
+  if (curIdx >= SCALE.length) return;
+  const btn = document.getElementById('btnReplay');
+  btn.classList.add('playing'); btn.textContent = '🔊 재생 중...';
+  playTone(SCALE[curIdx].freq);
+  setTimeout(() => { btn.classList.remove('playing'); btn.textContent = '🔊 다시 듣기'; }, 1600);
 }
 
-function scaleLoop() {
-  if (!scaleActive) return;
-  scaleAnimFrame = requestAnimationFrame(scaleLoop);
+// ═══ YIN pitch detection ══════════════════════════════════
+function detectPitch(buf, sr) {
+  const half = 2048, yin = new Float32Array(half);
+  for (let t = 0; t < half; t++) {
+    let s = 0;
+    for (let j = 0; j < half; j++) { const d = buf[j] - buf[j + t]; s += d * d; }
+    yin[t] = s;
+  }
+  yin[0] = 1; let rs = 0;
+  for (let t = 1; t < half; t++) { rs += yin[t]; yin[t] *= t / rs; }
+  for (let t = 2; t < half; t++) {
+    if (yin[t] < 0.15) {
+      while (t + 1 < half && yin[t+1] < yin[t]) t++;
+      const a = yin[t-1] ?? yin[t], b = yin[t], c = yin[t+1] ?? yin[t];
+      return sr / (t + (c - a) / (2 * (2*b - c - a)));
+    }
+  }
+  return -1;
+}
 
-  const buf = new Float32Array(scaleAnalyser.fftSize);
-  scaleAnalyser.getFloatTimeDomainData(buf);
+function freqToNote(freq) {
+  if (freq <= 0) return null;
+  const midi = 69 + 12 * Math.log2(freq / 440);
+  const r    = Math.round(midi);
+  const names = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  return { name: names[((r % 12) + 12) % 12], octave: Math.floor(r / 12) - 1, cents: Math.round((midi - r) * 100) };
+}
 
-  const rms = Math.sqrt(buf.reduce((s,v)=>s+v*v,0)/buf.length);
+// ═══ Main loop ════════════════════════════════════════════
+function loop() {
+  if (!active) return;
+  rafId = requestAnimationFrame(loop);
+
+  const buf = new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(buf);
+  const rms = Math.sqrt(buf.reduce((s, v) => s + v * v, 0) / buf.length);
+
   if (rms < 0.006) {
-    // silence — reset cooldown
-    scaleHitCooldown = false;
-    document.getElementById('detNote').textContent = '—';
-    document.getElementById('detNote').className = 'det-note';
+    if (sustainStart !== null) { sustainAcc = 0; sustainStart = null; setSustain(0); }
+    document.getElementById('detNote').textContent  = '—';
+    document.getElementById('detNote').className    = 'det-note';
     document.getElementById('detCents').textContent = '';
     return;
   }
-  if (scaleHitCooldown) return;
 
-  const freq = detectPitch(buf, scaleAudioCtx.sampleRate);
-  if (!freq || freq < 60 || freq > 2000) return;
+  const freq = detectPitch(buf, audioCtx.sampleRate);
+  if (freq < 60 || freq > 2000) return;
 
-  const info = freqToNoteName(freq);
+  const info = freqToNote(freq);
   if (!info) return;
 
-  const fullDetected = info.name + info.octave;
-  const target = SCALE_ALL[scaleIndex];
-  const centsOff = Math.round((Math.log2(freq / target.freq)) * 1200);
-  const isMatch = info.name === target.name && info.octave === target.octave && Math.abs(centsOff) <= HIT_TOLERANCE_CENTS;
-  const isClose = Math.abs(centsOff) <= HIT_TOLERANCE_CENTS * 2 && info.name === target.name;
+  const target = SCALE[curIdx];
+  const cents  = Math.round(1200 * Math.log2(freq / target.freq));
+  const isMatch = info.name === target.name && info.octave === target.octave && Math.abs(cents) <= HIT_CENTS;
+  const isClose = Math.abs(cents) <= HIT_CENTS * 2 && info.name === target.name;
 
-  // Update live detected display
+  // Detected display
   const detEl = document.getElementById('detNote');
   detEl.textContent = info.name + info.octave;
-  detEl.className = 'det-note' + (isMatch?' match':isClose?' close':' wrong');
-  document.getElementById('detCents').textContent = isMatch ? '✓' : (centsOff>0?'+':'')+centsOff+'¢';
+  detEl.className   = 'det-note' + (isMatch ? ' match' : isClose ? ' close' : ' wrong');
+  document.getElementById('detCents').textContent = isMatch ? '✓' : (cents > 0 ? '+' : '') + cents + '¢';
 
-  // Only count distinct sounds (prevent holding same note)
-  if (fullDetected !== scaleLastDetected) {
-    scaleLastDetected = fullDetected;
-    if (isMatch) {
-      scaleHits++;
-      scaleTotalOk++;
-      renderAttemptCircles();
+  const now = performance.now();
 
-      // Flash key green
-      const k = document.getElementById('key_'+scaleIndex);
-      if (k) { k.classList.remove('current'); k.classList.add('success'); }
+  if (isMatch) {
+    if (sustainStart === null) sustainStart = now;
+    sustainAcc = (now - sustainStart);
+    setSustain(sustainAcc);
 
-      if (scaleHits >= REQUIRED_HITS) {
-        // Passed this note — move on
-        scaleHitCooldown = true;
-        setTimeout(() => {
-          scaleHitCooldown = false;
-          scaleIndex++;
-          updateScaleTarget();
-        }, 500);
-      }
-    } else {
-      // Wrong note or out of range
-      scaleTotalFail++;
-      scaleHits = Math.max(0, scaleHits - 1); // lose one progress
-      renderAttemptCircles();
-      const k = document.getElementById('key_'+scaleIndex);
+    if (sustainAcc >= SUSTAIN_MS) {
+      // ✅ 1회 정답!
+      sustainStart = null; sustainAcc = 0; setSustain(0);
+      hits++; totalOk++;
+      renderHits();
+
+      // key flash green
+      const k = document.getElementById('key_' + curIdx);
       if (k) {
-        k.classList.add('failed');
-        setTimeout(() => { k.classList.remove('failed'); k.classList.add('current'); }, 300);
+        k.classList.remove('is-current'); k.classList.add('is-success');
+        setTimeout(() => { k.classList.remove('is-success'); k.classList.add('is-current'); }, 380);
+      }
+      flashName('ok');
+
+      if (hits >= REQUIRED) {
+        // 3회 달성 → 다음 음
+        setTimeout(() => {
+          if (curIdx + 1 >= SCALE.length) finishTrainer();
+          else gotoNote(curIdx + 1);
+        }, 450);
       }
     }
-  }
-}
-
-function finishScale() {
-  scaleActive = false;
-  if (scaleAnimFrame) cancelAnimationFrame(scaleAnimFrame);
-  if (scaleMicStream) scaleMicStream.getTracks().forEach(t=>t.stop());
-  if (scaleAudioCtx) scaleAudioCtx.close();
-
-  document.getElementById('btnScale').classList.remove('active');
-  document.getElementById('btnScaleText').textContent = '도~도 음계 연습 시작 (3옥타브)';
-
-  const total = SCALE_ALL.length;
-  document.getElementById('scaleCompleteStats').textContent =
-    `도~도 ${total}음을 모두 통과! (총 성공 ${scaleTotalOk}회 / 실패 ${scaleTotalFail}회)`;
-  document.getElementById('scaleComplete').classList.add('show');
-
-  // All keys green
-  SCALE_ALL.forEach((_,i) => {
-    const k = document.getElementById('key_'+i);
-    if (k) { k.className = 'piano-key'+(SCALE_ALL[i].isBlack?' black-key':''); k.classList.add('success'); }
-  });
-
-  // All dots done
-  document.querySelectorAll('.scale-dot-item').forEach(d => {
-    d.className = 'scale-dot-item done';
-  });
-}
-
-// ─── 실시간 음정 감지 ─────────────────────────────────────────────────────────
-let liveActive = false;
-let liveMicStream = null;
-let liveAudioCtx = null;
-let liveAnalyser = null;
-let liveAnimFrame = null;
-let liveHistory = [];
-let lastNoteName = '';
-let silenceTimer = null;
-
-const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-const NOTE_NAMES_KO = {
-  'C':'도','C#':'도#','D':'레','D#':'레#','E':'미',
-  'F':'파','F#':'파#','G':'솔','G#':'솔#','A':'라','A#':'라#','B':'시'
-};
-
-function freqToNoteName(freq) {
-  if (freq <= 0) return null;
-  const midi = 69 + 12 * Math.log2(freq / 440);
-  const rounded = Math.round(midi);
-  const name = NOTE_NAMES[((rounded % 12) + 12) % 12];
-  const octave = Math.floor(rounded / 12) - 1;
-  const cents = Math.round((midi - rounded) * 100);
-  return { name, octave, cents, midi: rounded };
-}
-
-async function toggleLivePitch() {
-  if (!liveActive) {
-    await startLivePitch();
   } else {
-    stopLivePitch();
-  }
-}
-
-async function startLivePitch() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showToast('이 브라우저는 마이크를 지원하지 않아요. Chrome을 사용해주세요.', 'error');
-    return;
-  }
-  try {
-    liveMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-  } catch(e) {
-    if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
-      showToast('마이크 권한이 거부됐어요. 주소창 왼쪽 🔒 아이콘 → 마이크 → 허용 후 새로고침!', 'error');
-    } else if (e.name === 'NotFoundError') {
-      showToast('마이크를 찾을 수 없어요. 마이크가 연결되어 있는지 확인해주세요.', 'error');
-    } else {
-      showToast('마이크 오류: ' + e.name + ' — ' + e.message, 'error');
+    // 틀린 음 — sustain 리셋
+    if (sustainStart !== null) {
+      sustainStart = null; sustainAcc = 0; setSustain(0);
+      totalFail++;
+      const k = document.getElementById('key_' + curIdx);
+      if (k) {
+        k.classList.add('is-fail');
+        setTimeout(() => { k.classList.remove('is-fail'); k.classList.add('is-current'); }, 300);
+      }
+      flashName('bad');
     }
-    return;
   }
-
-  liveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const source = liveAudioCtx.createMediaStreamSource(liveMicStream);
-  liveAnalyser = liveAudioCtx.createAnalyser();
-  liveAnalyser.fftSize = 4096;
-  liveAnalyser.smoothingTimeConstant = 0.4;
-  source.connect(liveAnalyser);
-
-  liveActive = true;
-  liveHistory = [];
-
-  const btn = document.getElementById('btnLive');
-  btn.classList.add('active');
-  document.getElementById('btnLiveText').textContent = '실시간 감지 중 — 끄기';
-  document.getElementById('liveDisplay').classList.add('show');
-  document.getElementById('liveHint').textContent = '마이크에 소리를 내보세요...';
-
-  liveLoop();
 }
 
-function stopLivePitch() {
-  liveActive = false;
-  if (liveAnimFrame) cancelAnimationFrame(liveAnimFrame);
-  if (liveMicStream) liveMicStream.getTracks().forEach(t => t.stop());
-  if (liveAudioCtx) liveAudioCtx.close();
-
-  const btn = document.getElementById('btnLive');
-  btn.classList.remove('active');
-  document.getElementById('btnLiveText').textContent = '실시간 음정 감지 시작';
-  document.getElementById('liveDisplay').classList.remove('show', 'has-note');
-
-  // Reset display
-  document.getElementById('liveNoteName').textContent = '—';
-  document.getElementById('liveNoteOctave').textContent = 'oct —';
-  document.getElementById('liveFreqVal').textContent = '—';
-  document.getElementById('tuningNeedle').style.left = 'calc(50% - 3px)';
-  document.getElementById('tuningNeedle').style.background = 'var(--text-dim)';
-  document.getElementById('liveHistory').innerHTML = '';
+function flashName(cls) {
+  const el = document.getElementById('targetName');
+  el.classList.add(cls);
+  setTimeout(() => el.classList.remove(cls), 380);
 }
 
-function liveLoop() {
-  if (!liveActive) return;
-  liveAnimFrame = requestAnimationFrame(liveLoop);
+// ═══ Finish ═══════════════════════════════════════════════
+function finishTrainer() {
+  active = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  if (audioCtx) audioCtx.close();
 
-  const bufLen = liveAnalyser.fftSize;
-  const buf = new Float32Array(bufLen);
-  liveAnalyser.getFloatTimeDomainData(buf);
+  document.getElementById('btnStart').classList.remove('active');
+  document.getElementById('btnStartText').textContent = '연습 시작하기';
+  document.getElementById('completeSub').textContent =
+    `${SCALE.length}음 완주! 성공 ${totalOk}회 / 실패 ${totalFail}회`;
+  document.getElementById('completeScreen').classList.add('show');
 
-  // RMS check
-  const rms = Math.sqrt(buf.reduce((s,v)=>s+v*v,0)/bufLen);
-
-  if (rms < 0.005) {
-    // Silence
-    if (!silenceTimer) {
-      silenceTimer = setTimeout(() => {
-        document.getElementById('liveDisplay').classList.remove('has-note');
-        document.getElementById('liveHint').textContent = '마이크에 소리를 내보세요...';
-        document.getElementById('liveNoteName').textContent = '—';
-        document.getElementById('liveNoteOctave').textContent = 'oct —';
-        document.getElementById('liveFreqVal').textContent = '—';
-        document.getElementById('tuningNeedle').style.left = 'calc(50% - 3px)';
-        document.getElementById('tuningNeedle').style.background = 'var(--text-dim)';
-        lastNoteName = '';
-      }, 300);
-    }
-    return;
-  }
-
-  clearTimeout(silenceTimer);
-  silenceTimer = null;
-
-  // YIN on mic buffer
-  const freq = detectPitch(buf, liveAudioCtx.sampleRate);
-  if (freq < 50 || freq > 2000) return;
-
-  const info = freqToNoteName(freq);
-  if (!info) return;
-
-  const display = document.getElementById('liveDisplay');
-  display.classList.add('has-note');
-  document.getElementById('liveHint').textContent = `${NOTE_NAMES_KO[info.name]} (${info.name}${info.octave}) — ${freq.toFixed(1)} Hz`;
-
-  // Note name
-  document.getElementById('liveNoteName').textContent = info.name;
-  document.getElementById('liveNoteOctave').textContent = `oct ${info.octave}`;
-  document.getElementById('liveFreqVal').textContent = freq.toFixed(1);
-
-  // Tuning needle: cents range -50 ~ +50 → 0~100%
-  const clampedCents = Math.max(-50, Math.min(50, info.cents));
-  const needlePct = ((clampedCents + 50) / 100) * 100;
-  const needle = document.getElementById('tuningNeedle');
-  needle.style.left = `calc(${needlePct}% - 3px)`;
-  const abs = Math.abs(info.cents);
-  needle.style.background = abs <= 10 ? 'var(--green)' : abs <= 25 ? 'var(--yellow)' : 'var(--red)';
-
-  // History: only add when note changes
-  const fullName = info.name + info.octave;
-  if (fullName !== lastNoteName) {
-    lastNoteName = fullName;
-    liveHistory.unshift({ name: info.name, octave: info.octave });
-    if (liveHistory.length > 10) liveHistory.pop();
-
-    const histEl = document.getElementById('liveHistory');
-    histEl.innerHTML = liveHistory.map((h, i) =>
-      `<span class="history-chip" style="${i===0?'':'opacity:'+(1-i*0.08)}">${h.name}${h.octave}</span>`
-    ).join('');
-  }
+  SCALE.forEach((n, i) => {
+    const k = document.getElementById('key_' + i);
+    if (k) k.className = 'piano-key' + (n.isBlack ? ' black-key' : '') + ' is-done';
+  });
+  document.querySelectorAll('.pdot').forEach(d => d.className = 'pdot done');
 }
 </script>
 </body>
