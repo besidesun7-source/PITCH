@@ -233,6 +233,29 @@
   }
   .btn-retry:hover { background: rgba(52,211,153,0.1); }
 
+  /* Volume control */
+  .volume-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 16px;
+  }
+  .vol-icon { font-size: 1.1rem; cursor: pointer; user-select: none; flex-shrink: 0; }
+  .vol-label { font-size: 0.7rem; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
+  .vol-slider {
+    flex: 1; -webkit-appearance: none; height: 5px;
+    background: var(--border); border-radius: 3px; outline: none; cursor: pointer;
+  }
+  .vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    background: var(--accent2); border-radius: 50%; cursor: pointer;
+    box-shadow: 0 0 6px rgba(192,132,252,0.5);
+  }
+  .vol-slider::-moz-range-thumb {
+    width: 16px; height: 16px; background: var(--accent2);
+    border-radius: 50%; border: none; cursor: pointer;
+  }
+  .vol-pct { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--accent2); min-width: 36px; text-align: right; }
+
   /* Toast */
   .toast {
     position: fixed; bottom: 24px; right: 20px;
@@ -293,10 +316,20 @@
         <div class="hit-circles" id="hitCircles"></div>
       </div>
 
+      <!-- Volume control -->
+      <div class="volume-row">
+        <span class="vol-icon" onclick="setVolStep(-1)" title="볼륨 감소">🔉</span>
+        <span class="vol-label">볼륨</span>
+        <input class="vol-slider" type="range" id="volSlider" min="0" max="100" value="50"
+          oninput="onVolSlider(this.value)">
+        <span class="vol-pct" id="volPct">50%</span>
+        <span class="vol-icon" onclick="setVolStep(1)" title="볼륨 증가">🔊</span>
+      </div>
+
       <!-- Sustain bar -->
       <div class="sustain-wrap">
         <div class="sustain-top">
-          <span>음 유지 시간 (0.5초 유지 = 1회 정답)</span>
+          <span>음 유지 시간 (0.2초 유지 = 1회 정답)</span>
           <span id="sustainPct">0%</span>
         </div>
         <div class="sustain-track">
@@ -330,7 +363,7 @@
 const KO    = {C:'도','C#':'도#',D:'레','D#':'레#',E:'미',F:'파','F#':'파#',G:'솔','G#':'솔#',A:'라','A#':'라#',B:'시'};
 const SEMIS = {C:0,'C#':1,D:2,'D#':3,E:4,F:5,'F#':6,G:7,'G#':8,A:9,'A#':10,B:11};
 const REQUIRED = 3;       // 정답 3회면 다음 음
-const SUSTAIN_MS = 500;   // 0.5초 유지 = 1회 정답
+const SUSTAIN_MS = 200;   // 0.2초 유지 = 1회 정답
 const HIT_CENTS  = 10;    // ±10¢ 이내면 통과 (3단계: ≤3¢ 초록, ≤7¢ 주황, ≤10¢ 빨강)
 
 const SCALE = [];
@@ -504,7 +537,27 @@ function setSustain(ms) {
   document.getElementById('sustainPct').textContent = Math.round(pct) + '%';
 }
 
-// ═══ Reference tone (1.5s — 2× 원본) ════════════════════
+// ═══ Volume (0~1, 기본 0.5, 최대 1.4 = 원래 0.28의 5배) ════
+let volLevel = 0.5; // 슬라이더 0~100 → 0~1
+
+function volToGain(v) {
+  // 슬라이더 0~1 → gain 0~1.4 (최대가 0.28*5=1.4)
+  return v * 1.4;
+}
+
+function onVolSlider(val) {
+  volLevel = val / 100;
+  document.getElementById('volPct').textContent = val + '%';
+}
+
+function setVolStep(dir) {
+  const slider = document.getElementById('volSlider');
+  const next = Math.max(0, Math.min(100, parseInt(slider.value) + dir * 10));
+  slider.value = next;
+  onVolSlider(next);
+}
+
+// ═══ Reference tone (1.5s) ════════════════════════════════
 function playTone(freq) {
   try {
     const ctx  = new (window.AudioContext || window.webkitAudioContext)();
@@ -512,10 +565,11 @@ function playTone(freq) {
     const gain = ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
     osc.frequency.value = freq; osc.type = 'sine';
+    const peak = volToGain(volLevel);
     gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.28, ctx.currentTime + 0.06);
-    gain.gain.linearRampToValueAtTime(0.22, ctx.currentTime + 0.9);
-    gain.gain.linearRampToValueAtTime(0,    ctx.currentTime + 1.5);
+    gain.gain.linearRampToValueAtTime(peak,        ctx.currentTime + 0.06);
+    gain.gain.linearRampToValueAtTime(peak * 0.8,  ctx.currentTime + 0.9);
+    gain.gain.linearRampToValueAtTime(0,           ctx.currentTime + 1.5);
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 1.55);
     osc.onended = () => ctx.close();
